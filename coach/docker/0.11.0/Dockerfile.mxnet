@@ -1,0 +1,43 @@
+ARG processor
+FROM 520713654638.dkr.ecr.us-west-2.amazonaws.com/sagemaker-mxnet:1.3.0-$processor-py3
+
+# Install gym dependencies and
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        jq \
+        libav-tools \
+        libjpeg-dev \
+        python3-dev \
+        python3-opengl \
+        wget \
+        xvfb && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Redis.
+RUN cd /tmp && \
+    wget http://download.redis.io/redis-stable.tar.gz && \
+    tar xvzf redis-stable.tar.gz && \
+    cd redis-stable && \
+    make && \
+    make installtest
+
+# Install and set up coach
+RUN pip install --no-cache-dir \
+    redis==2.10.6 \
+    PyOpenGL==3.1.0 \
+    gym==0.10.5 \
+    rl-coach-slim==0.11.0 && \
+    pip install --no-cache-dir --upgrade sagemaker-containers
+
+ENV COACH_BACKEND=mxnet
+
+# Copy workaround script for incorrect hostname
+COPY lib/changehostname.c /
+COPY lib/start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
+WORKDIR /opt/ml
+
+# Starts framework
+ENTRYPOINT ["bash", "-m", "start.sh"]
