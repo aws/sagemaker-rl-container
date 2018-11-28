@@ -21,8 +21,6 @@ from test.integration import RESOURCE_PATH
 import local_mode_utils
 
 
-@pytest.mark.run_coach
-@pytest.mark.run_ray
 def test_gym(local_instance_type, sagemaker_local_session, docker_image, tmpdir, framework):
     source_path = os.path.join(RESOURCE_PATH, 'gym')
     gym_script = 'launcher.sh' if framework == 'tensorflow' else 'gym_envs.py'

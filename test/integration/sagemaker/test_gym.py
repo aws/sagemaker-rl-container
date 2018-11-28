@@ -13,15 +13,12 @@
 from __future__ import absolute_import
 
 import os
-import pytest
 
 from sagemaker.rl import RLEstimator
 from test.integration import RESOURCE_PATH
 from timeout import timeout
 
 
-@pytest.mark.run_coach
-@pytest.mark.run_ray
 def test_gym(sagemaker_session, ecr_image, instance_type, framework):
     resource_path = os.path.join(RESOURCE_PATH, 'gym')
     gym_script = 'launcher.sh' if framework == 'tensorflow' else 'gym_envs.py'

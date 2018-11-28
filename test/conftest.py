@@ -39,7 +39,7 @@ def pytest_addoption(parser):
     parser.addoption('--framework', default='tensorflow')
     parser.addoption('--region', default='us-west-2')
     parser.addoption('--toolkit', default='coach')
-    parser.addoption('--toolkit-version', default='0.11.0')
+    parser.addoption('--toolkit-version', default=None)
     parser.addoption('--processor', default='cpu', choices=['gpu', 'cpu'])
     parser.addoption('--aws-id', default=None)
     parser.addoption('--instance-type', default=None)
