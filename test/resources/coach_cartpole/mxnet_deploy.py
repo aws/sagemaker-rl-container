@@ -1,8 +1,9 @@
 import os
 import json
+
 import mxnet as mx
-from mxnet.contrib import onnx as onnx_mxnet
 from mxnet import gluon, nd
+from mxnet.contrib import onnx as onnx_mxnet
 
 
 def model_fn(model_dir):

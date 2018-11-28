@@ -35,7 +35,7 @@ LATEST_RAY_VERSION = '0.5.3'
 
 
 def pytest_addoption(parser):
-    parser.addoption('--base-name', default='sagemaker-rl')
+    parser.addoption('--docker-base-name', default=None)
     parser.addoption('--framework', default='tensorflow')
     parser.addoption('--region', default='us-west-2')
     parser.addoption('--toolkit', default='coach')
@@ -70,8 +70,9 @@ def toolkit_version(request, toolkit):
 
 @pytest.fixture(scope='session')
 def docker_base_name(request, framework):
-    return '{}-{}'.format(request.config.getoption('--base-name'),
-                          framework)
+    provided_base_name = request.config.getoption('--docker-base-name')
+    default_base_name = 'sagemaker-rl-{}'.format(framework)
+    return provided_base_name if provided_base_name else default_base_name
 
 
 @pytest.fixture(scope='session')
