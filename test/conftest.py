@@ -35,16 +35,16 @@ LATEST_RAY_VERSION = '0.5.3'
 
 
 def pytest_addoption(parser):
-    parser.addoption('--docker-base-name', default=None)
-    parser.addoption('--framework', default='tensorflow')
+    parser.addoption('--docker-base-name')
+    parser.addoption('--framework', choices=['tensorflow', 'mxnet'])
     parser.addoption('--region', default='us-west-2')
-    parser.addoption('--toolkit', default='coach')
-    parser.addoption('--toolkit-version', default=None)
+    parser.addoption('--toolkit', choices=['coach', 'ray'])
+    parser.addoption('--toolkit-version')
     parser.addoption('--processor', default='cpu', choices=['gpu', 'cpu'])
-    parser.addoption('--aws-id', default=None)
-    parser.addoption('--instance-type', default=None)
+    parser.addoption('--aws-id')
+    parser.addoption('--instance-type')
     # If not specified, will default to {toolkit}{toolkit-version}-{processor}-py3
-    parser.addoption('--tag', default=None)
+    parser.addoption('--tag')
 
 
 @pytest.fixture(scope='session')
