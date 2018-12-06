@@ -2,7 +2,7 @@
 Amazon SageMaker RL Containers
 ==============================
 
-A set of Dockerfiles that provides Reinforcement Learning (RL) solutions to be used in SageMaker. 
+A set of Dockerfiles that enables Reinforcement Learning (RL) solutions to be used in SageMaker.
 
 The SageMaker team uses this repository to build its official RL images. On how to use any of these images on SageMaker,
 see `Python SDK <https://github.com/aws/sagemaker-python-sdk>`__.
@@ -38,7 +38,7 @@ development machine:
 For Testing on GPU
 ^^^^^^^^^^^^^^^^^^
 
--  `Nvidia-Docker <https://github.com/NVIDIA/nvidia-docker>`__
+-  `Nvidia-Docker2 <https://github.com/NVIDIA/nvidia-docker>`__
 
 Recommended
 ^^^^^^^^^^^
@@ -67,10 +67,12 @@ These "base" images are specified with the following naming convention:
 
 ::
 
-    # 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-<framework>:<framework_version>-<processor>-py3
-    520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-<tensorflow-scriptmode_or_mxnet>:<framework_version>-<cpu_or_gpu>-py3
+    520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-<framework>:<framework_version>-<processor>-py3
 
-`List of supported SageMaker regions <https://docs.aws.amazon.com/general/latest/gr/rande.html#sagemaker_region>`__.
+* `<framework>` can be `tensorflow-scriptmode` (with `<framework_version>` `1.11.0` or higher depending on the toolkit requirements)
+  or `mxnet` (with `<framework_version>` `1.3.0` or higher depending on the toolkit requirements);
+* `<processor>` can be `cpu` or `gpu`;
+* for valid `<region>` values please see `list of supported SageMaker regions <https://docs.aws.amazon.com/general/latest/gr/rande.html#sagemaker_region>`__.
 
 Before building images:
 
