@@ -69,10 +69,10 @@ These "base" images are specified with the following naming convention:
 
     520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-<framework>:<framework_version>-<processor>-py3
 
-* `<framework>` can be `tensorflow-scriptmode` (with `<framework_version>` `1.11.0` or higher depending on the toolkit requirements)
-  or `mxnet` (with `<framework_version>` `1.3.0` or higher depending on the toolkit requirements);
-* `<processor>` can be `cpu` or `gpu`;
-* for valid `<region>` values please see `list of supported SageMaker regions <https://docs.aws.amazon.com/general/latest/gr/rande.html#sagemaker_region>`__.
+* ``<framework>`` can be ``tensorflow-scriptmode`` (with ``<framework_version>`` ``1.11.0`` or higher depending on the toolkit requirements)
+  or ``mxnet`` (with ``<framework_version>`` ``1.3.0`` or higher depending on the toolkit requirements);
+* ``<processor>`` can be ``cpu`` or ``gpu``;
+* for valid ``<region>`` values please see `list of supported SageMaker regions <https://docs.aws.amazon.com/general/latest/gr/rande.html#sagemaker_region>`__.
 
 Before building images:
 
