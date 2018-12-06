@@ -164,17 +164,17 @@ If you want to run local integration tests, then use:
 
     # Required arguments for integration tests are found in test/conftest.py
     pytest test/integration/local --toolkit <toolkit_to_run_tests_for> \
-                           --docker-base-name <your_docker_image> \
-                           --tag <your_docker_image_tag> \
-                           --processor <cpu_or_gpu>
+                                  --docker-base-name <your_docker_image> \
+                                  --tag <your_docker_image_tag> \
+                                  --processor <cpu_or_gpu>
 
 ::
 
     # Example
     pytest test/integration/local --toolkit coach \
-                           --docker-base-name custom-rl-coach-image \
-                           --tag 1.0 \
-                           --processor cpu
+                                  --docker-base-name custom-rl-coach-image \
+                                  --tag 1.0 \
+                                  --processor cpu
 
 SageMaker Integration Tests
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -201,19 +201,19 @@ SageMaker <https://aws.amazon.com/sagemaker/>`__, then use:
 
     # Required arguments for integration tests are found in test/conftest.py
     pytest test/integration/sagemaker --toolkit <toolkit_to_run_tests_for> \
-                           --aws-id <your_aws_id> \
-                           --docker-base-name <your_docker_image> \
-                           --instance-type <amazon_sagemaker_instance_type> \
-                           --tag <your_docker_image_tag> \
+                                      --aws-id <your_aws_id> \
+                                      --docker-base-name <your_docker_image> \
+                                      --instance-type <amazon_sagemaker_instance_type> \
+                                      --tag <your_docker_image_tag> \
 
 ::
 
     # Example
     pytest test/integration/sagemaker --toolkit coach \
-                           --aws-id 12345678910 \
-                           --docker-base-name custom-rl-coach-image \
-                           --instance-type ml.m4.xlarge \
-                           --tag 1.0
+                                      --aws-id 12345678910 \
+                                       --docker-base-name custom-rl-coach-image \
+                                      --instance-type ml.m4.xlarge \
+                                      --tag 1.0
 
 
 RL Images Provided by SageMaker
