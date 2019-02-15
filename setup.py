@@ -31,7 +31,7 @@ setup(
                 'Reinforcement Learning containers to run on Amazon SageMaker.',
     py_modules=[splitext(basename(path))[0] for path in glob('src/*.py')],
 
-    long_description=read('README.md'),
+    long_description=read('README.rst'),
     author='Amazon Web Services',
     url='https://github.com/aws/sagemaker-rl-container',
     license='Apache License 2.0',
