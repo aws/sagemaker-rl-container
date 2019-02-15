@@ -144,8 +144,8 @@ def opt_ml():
 
 @pytest.fixture(autouse=True)
 def skip_wrong_toolkit(request, toolkit):
-    run_coach = request.node.get_marker('run_coach')
-    run_ray = request.node.get_marker('run_ray')
+    run_coach = request.node.get_closest_marker('run_coach')
+    run_ray = request.node.get_closest_marker('run_ray')
     if (run_coach or run_ray) and not (run_coach and toolkit == 'coach') and \
             not (run_ray and toolkit == 'ray'):
         pytest.skip('Skipping because we are not testing container with corresponding RL Toolkit.')
