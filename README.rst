@@ -120,7 +120,7 @@ To build RL Docker image:
     docker build -t tf-ray:0.5.3-cpu-py3 -f ray/docker/0.5.3/Dockerfile.tf --build-arg processor=cpu .
 
     # Coach TensorFlow GPU
-    docker build -t tf-coach:0.11.0-gpu-py3 -f coach/docker/0.11.0/final/Dockerfile.tf --build-arg processor=gpu .
+    docker build -t tf-coach:0.11.0-gpu-py3 -f coach/docker/0.11.0/Dockerfile.tf --build-arg processor=gpu .
 
     # Coach MXNet CPU
     docker build -t mxnet-coach:0.11.0-cpu-py3 -f coach/docker/0.11.0/Dockerfile.mxnet --build-arg processor=cpu .
@@ -259,4 +259,4 @@ requests to us.
 License
 -------
 
-This library is licensed under the Apache 2.0 License. 
+This library is licensed under the Apache 2.0 License.
