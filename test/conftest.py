@@ -21,6 +21,7 @@ import tempfile
 import boto3
 import pytest
 from sagemaker import LocalSession, Session
+from sagemaker.rl import RLEstimator
 
 logger = logging.getLogger(__name__)
 logging.getLogger('boto').setLevel(logging.INFO)
@@ -30,8 +31,6 @@ logging.getLogger('auth.py').setLevel(logging.INFO)
 logging.getLogger('connectionpool.py').setLevel(logging.INFO)
 
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
-LATEST_COACH_VERSION = '0.11.0'
-LATEST_RAY_VERSION = '0.5.3'
 
 
 def pytest_addoption(parser):
@@ -62,9 +61,9 @@ def toolkit_version(request, toolkit):
     provided_version = request.config.getoption('--toolkit-version')
     if not provided_version:
         if toolkit == 'coach':
-            return LATEST_COACH_VERSION
+            return RLEstimator.COACH_LATEST_VERSION
         if toolkit == 'ray':
-            return LATEST_RAY_VERSION
+            return RLEstimator.RAY_LATEST_VERSION
     return provided_version
 
 
