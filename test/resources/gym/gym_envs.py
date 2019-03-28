@@ -36,7 +36,7 @@ def run_simulation(env_name, output_dir):
         env.reset()
         total_reward = 0
         for step in range(1000):
-            env.render(mode='rgb_array')
+            env.render(mode='ansi')
             action = env.action_space.sample()  # your agent here (this takes random actions)
             observation, reward, done, info = env.step(action)
             total_reward += reward
