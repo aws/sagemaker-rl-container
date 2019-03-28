@@ -57,11 +57,14 @@ def toolkit(request):
 
 
 @pytest.fixture(scope='session')
-def toolkit_version(request, toolkit):
+def toolkit_version(request, toolkit, framework):
     provided_version = request.config.getoption('--toolkit-version')
     if not provided_version:
         if toolkit == 'coach':
-            return RLEstimator.COACH_LATEST_VERSION
+            if framework == 'tensorflow':
+                return RLEstimator.COACH_LATEST_VERSION_TF
+            if framework == 'mxnet':
+                return RLEstimator.COACH_LATEST_VERSION_MXNET
         if toolkit == 'ray':
             return RLEstimator.RAY_LATEST_VERSION
     return provided_version
