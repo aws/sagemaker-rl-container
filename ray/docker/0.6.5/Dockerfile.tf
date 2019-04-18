@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir \
     Cython==0.29.7 \
     gym==0.12.1 \
     lz4 \
-    opencv-python-headless \
+    opencv-python-headless==4.1.0 \
     PyOpenGL==3.1.0 \
     pyyaml \
     redis==3.2.1 \
