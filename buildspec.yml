@@ -22,7 +22,6 @@ phases:
   pre_build:
     commands:
       - start-dockerd
-      - cp /usr/local/bin/remote_test.py .
       - |
         ACCOUNT=$(aws sts get-caller-identity --query 'Account' --output text)
         PREPROD_IMAGE="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO"
@@ -104,11 +103,11 @@ phases:
         if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "ray/*"; then
           printf "$SETUP_CMDS" > $SETUP_FILE
           cmd="pytest test/integration/local -region $AWS_DEFAULT_REGION --toolkit coach --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_GPU_TAG --processor gpu"
-          python3 remote_test.py --github-repo $GITHUB_REPO --test-cmd "$cmd" --setup-file $SETUP_FILE
+          remote_test.py --github-repo $GITHUB_REPO --test-cmd "$cmd" --setup-file $SETUP_FILE
           cmd="pytest test/integration/local -region $AWS_DEFAULT_REGION --toolkit coach --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_GPU_TAG --processor gpu"
-          python3 remote_test.py --github-repo $GITHUB_REPO --test-cmd "$cmd" --skip-setup
+          remote_test.py --github-repo $GITHUB_REPO --test-cmd "$cmd" --skip-setup
           cmd="pytest test/integration/local -region $AWS_DEFAULT_REGION --toolkit ray --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_GPU_TAG --processor gpu"
-          python3 remote_test.py --github-repo $GITHUB_REPO --test-cmd "$cmd" --skip-setup
+          remote_test.py --github-repo $GITHUB_REPO --test-cmd "$cmd" --skip-setup
         else
           echo "skipping coach gpu integration tests"
         fi
