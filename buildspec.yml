@@ -91,6 +91,16 @@ phases:
         docker push $PREPROD_IMAGE:$COACH_TF_GPU_TAG
         docker push $PREPROD_IMAGE:$RAY_TF_GPU_TAG
 
+      # run cpu integration tests
+      - |
+        if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "ray/*"; then
+          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_CPU_TAG --toolkit coach --processor cpu
+          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_CPU_TAG --toolkit coach --processor cpu
+          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_CPU_TAG --toolkit ray --processor cpu
+        else
+          echo "skipping cpu integration tests"
+        fi
+
       # launch remote gpu instance
       - |
         prefix='ml.'
@@ -112,14 +122,14 @@ phases:
           echo "skipping coach gpu integration tests"
         fi
 
-      # run cpu integration tests
+      # run cpu sagemaker tests
       - |
-        if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "ray/*"; then
-          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_CPU_TAG --toolkit coach --processor cpu
-          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_CPU_TAG --toolkit coach --processor cpu
-          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_CPU_TAG --toolkit ray --processor cpu
+        if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "ray/*"; then
+          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_MXNET_CPU_TAG --toolkit coach --instance-type $CPU_INSTANCE_TYPE
+          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_TF_CPU_TAG --toolkit coach --instance-type $CPU_INSTANCE_TYPE
+          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $RAY_TF_CPU_TAG --toolkit ray --instance-type $CPU_INSTANCE_TYPE
         else
-          echo "skipping cpu integration tests"
+          echo "skipping cpu sagemaker tests"
         fi
 
       # run gpu sagemaker tests
@@ -130,16 +140,6 @@ phases:
           pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $RAY_TF_CPU_TAG --toolkit ray --instance-type $GPU_INSTANCE_TYPE
         else
           echo "skipping gpu sagemaker tests"
-        fi
-
-      # run cpu sagemaker tests
-      - |
-        if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "ray/*"; then
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_MXNET_CPU_TAG --toolkit coach --instance-type $CPU_INSTANCE_TYPE
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_TF_CPU_TAG --toolkit coach --instance-type $CPU_INSTANCE_TYPE
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $RAY_TF_CPU_TAG --toolkit ray --instance-type $CPU_INSTANCE_TYPE
-        else
-          echo "skipping cpu sagemaker tests"
         fi
     finally:
       # shut down remote gpu instance
