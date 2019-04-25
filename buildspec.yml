@@ -38,7 +38,8 @@ phases:
 
       # launch remote gpu instance
       - echo "launch remote gpu instance"
-      - prefix='ml.'
+      - |
+        prefix='ml.'
         instance_type=${GPU_INSTANCE_TYPE#"$prefix"}
       - create-key-pair
       - launch-ec2-instance --instance-type $instance_type --ami-name dlami-ubuntu
