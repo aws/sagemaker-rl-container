@@ -35,6 +35,13 @@ phases:
       # install
       - pip3 install -U -e .
 
+      # launch remote gpu instance
+      - |
+        prefix='ml.'
+        instance_type=${GPU_INSTANCE_TYPE#"$prefix"}
+      - create-key-pair
+      - launch-ec2-instance --instance-type $instance_type --ami-name dlami-ubuntu
+
       - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION --registry-ids $PROD_ACCOUNT)
       - |
         MXNET_IMAGE="$PROD_ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/sagemaker-mxnet"
@@ -65,81 +72,78 @@ phases:
 
       # build cpu images
       - |
-        COACH_MXNET_CPU_TAG="coach-$COACH_MXNET_TOOLKIT_VERSION-mxnet-cpu-py$PY_VERSION-$build_id"
+        COACH_MXNET_CPU_TAG="coach-$COACH_MXNET_TOOLKIT_VERSION-mxnet-cpu-py$PY_VERSION-$BUILD_ID"
         docker build -t $PREPROD_IMAGE:$COACH_MXNET_CPU_TAG -f coach/docker/$COACH_MXNET_TOOLKIT_VERSION/Dockerfile.mxnet --build-arg processor=cpu .
-        COACH_TF_CPU_TAG="coach-$COACH_TF_TOOLKIT_VERSION-tf-cpu-py$PY_VERSION-$build_id"
+        COACH_TF_CPU_TAG="coach-$COACH_TF_TOOLKIT_VERSION-tf-cpu-py$PY_VERSION-$BUILD_ID"
         docker build -t $PREPROD_IMAGE:$COACH_TF_CPU_TAG -f coach/docker/$COACH_TF_TOOLKIT_VERSION/Dockerfile.tf --build-arg processor=cpu .
-        RAY_TF_CPU_TAG="ray-$RAY_TF_TOOKIT_VERSION-tf-cpu-py$PY_VERSION-$build_id"
+        RAY_TF_CPU_TAG="ray-$RAY_TF_TOOKIT_VERSION-tf-cpu-py$PY_VERSION-$BUILD_ID"
         docker build -t $PREPROD_IMAGE:$RAY_TF_CPU_TAG -f ray/docker/$RAY_TF_TOOKIT_VERSION/Dockerfile.tf --build-arg processor=cpu .
-      
-      # build gpu images
-      - |
-        COACH_MXNET_GPU_TAG="coach-$COACH_MXNET_TOOLKIT_VERSION-mxnet-gpu-py$PY_VERSION-$build_id"
-        docker build -t $PREPROD_IMAGE:$COACH_MXNET_GPU_TAG -f coach/docker/$COACH_MXNET_TOOLKIT_VERSION/Dockerfile.mxnet --build-arg processor=gpu .
-        COACH_TF_GPU_TAG="coach-$COACH_TF_TOOLKIT_VERSION-tf-gpu-py$PY_VERSION-$build_id"
-        docker build -t $PREPROD_IMAGE:$COACH_TF_GPU_TAG -f coach/docker/$COACH_TF_TOOLKIT_VERSION/Dockerfile.tf --build-arg processor=gpu .
-        RAY_TF_GPU_TAG="ray-$RAY_TF_TOOKIT_VERSION-tf-gpu-py$PY_VERSION-$build_id"
-        docker build -t $PREPROD_IMAGE:$RAY_TF_GPU_TAG -f ray/docker/$RAY_TF_TOOKIT_VERSION/Dockerfile.tf --build-arg processor=gpu .
-      
-      # push images to ecr
+
+      # push cpu images to ecr
       - |
         $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
         docker push $PREPROD_IMAGE:$COACH_MXNET_CPU_TAG
         docker push $PREPROD_IMAGE:$COACH_TF_CPU_TAG
         docker push $PREPROD_IMAGE:$RAY_TF_CPU_TAG
+
+      # run cpu integration tests
+      - |
+        if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "ray/*"; then
+          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_CPU_TAG --framework mxnet --toolkit coach --processor cpu
+          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_CPU_TAG --framework tensorflow  --toolkit coach --processor cpu
+          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_CPU_TAG --framework tensorflow --toolkit ray --processor cpu
+        else
+          echo "skipping cpu integration tests"
+        fi
+
+      # build gpu images
+      - |
+        COACH_MXNET_GPU_TAG="coach-$COACH_MXNET_TOOLKIT_VERSION-mxnet-gpu-py$PY_VERSION-$BUILD_ID"
+        docker build -t $PREPROD_IMAGE:$COACH_MXNET_GPU_TAG -f coach/docker/$COACH_MXNET_TOOLKIT_VERSION/Dockerfile.mxnet --build-arg processor=gpu .
+        COACH_TF_GPU_TAG="coach-$COACH_TF_TOOLKIT_VERSION-tf-gpu-py$PY_VERSION-$BUILD_ID"
+        docker build -t $PREPROD_IMAGE:$COACH_TF_GPU_TAG -f coach/docker/$COACH_TF_TOOLKIT_VERSION/Dockerfile.tf --build-arg processor=gpu .
+        RAY_TF_GPU_TAG="ray-$RAY_TF_TOOKIT_VERSION-tf-gpu-py$PY_VERSION-$BUILD_ID"
+        docker build -t $PREPROD_IMAGE:$RAY_TF_GPU_TAG -f ray/docker/$RAY_TF_TOOKIT_VERSION/Dockerfile.tf --build-arg processor=gpu .
+
+      # push gpu images to ecr
+      - |
+        $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
         docker push $PREPROD_IMAGE:$COACH_MXNET_GPU_TAG
         docker push $PREPROD_IMAGE:$COACH_TF_GPU_TAG
         docker push $PREPROD_IMAGE:$RAY_TF_GPU_TAG
-
-      # launch remote gpu instance
-      - |
-        prefix='ml.'
-        instance_type=${GPU_INSTANCE_TYPE#"$prefix"}
-      - create-key-pair
-      - launch-ec2-instance --instance-type $instance_type --ami-name dlami-ubuntu
 
       # run gpu integration tests
       - |
         if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "ray/*"; then
           printf "$SETUP_CMDS" > $SETUP_FILE
-          cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit coach --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_GPU_TAG --processor gpu"
+          cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit coach --framework mxnet --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_GPU_TAG --processor gpu"
           remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --setup-file $SETUP_FILE
-          cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit coach --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_GPU_TAG --processor gpu"
+          cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit coach --framework tensorflow  --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_GPU_TAG --processor gpu"
           remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --skip-setup
-          cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit ray --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_GPU_TAG --processor gpu"
+          cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit ray --framework tensorflow --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_GPU_TAG --processor gpu"
           remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --skip-setup
         else
           echo "skipping coach gpu integration tests"
         fi
 
-      # run cpu integration tests
+      # run cpu sagemaker tests
       - |
-        if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "ray/*"; then
-          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_CPU_TAG --toolkit coach --processor cpu
-          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_CPU_TAG --toolkit coach --processor cpu
-          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_CPU_TAG --toolkit ray --processor cpu
+        if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "ray/*"; then
+          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_MXNET_CPU_TAG --framework mxnet --toolkit coach --instance-type $CPU_INSTANCE_TYPE
+          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_TF_CPU_TAG --framework tensorflow --toolkit coach --instance-type $CPU_INSTANCE_TYPE
+          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $RAY_TF_CPU_TAG --framework tensorflow --toolkit ray --instance-type $CPU_INSTANCE_TYPE
         else
-          echo "skipping cpu integration tests"
+          echo "skipping cpu sagemaker tests"
         fi
 
       # run gpu sagemaker tests
       - |
         if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "ray/*"; then
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_MXNET_CPU_TAG --toolkit coach --instance-type $GPU_INSTANCE_TYPE
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_TF_CPU_TAG --toolkit coach --instance-type $GPU_INSTANCE_TYPE
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $RAY_TF_CPU_TAG --toolkit ray --instance-type $GPU_INSTANCE_TYPE
+          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_MXNET_GPU_TAG --framework mxnet --toolkit coach --instance-type $GPU_INSTANCE_TYPE
+          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_TF_GPU_TAG --framework tensorflow --toolkit coach --instance-type $GPU_INSTANCE_TYPE
+          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $RAY_TF_GPU_TAG --framework tensorflow --toolkit ray --instance-type $GPU_INSTANCE_TYPE
         else
           echo "skipping gpu sagemaker tests"
-        fi
-
-      # run cpu sagemaker tests
-      - |
-        if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "ray/*"; then
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_MXNET_CPU_TAG --toolkit coach --instance-type $CPU_INSTANCE_TYPE
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_TF_CPU_TAG --toolkit coach --instance-type $CPU_INSTANCE_TYPE
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $RAY_TF_CPU_TAG --toolkit ray --instance-type $CPU_INSTANCE_TYPE
-        else
-          echo "skipping cpu sagemaker tests"
         fi
     finally:
       # shut down remote gpu instance
