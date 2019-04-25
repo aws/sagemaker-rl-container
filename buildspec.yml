@@ -26,10 +26,10 @@ phases:
         ACCOUNT=$(aws sts get-caller-identity --query 'Account' --output text)
         PREPROD_IMAGE="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO"
       # keep ssh connection alive when communicating with remote ec2 server during integ test
-      # largest connection idle time allowed: 30 seconds * 60 attempts = 30 minutes
+      # largest connection idle time allowed: 10 seconds * 300 attempts = 50 minutes
       - |
-        echo '  ServerAliveInterval 30' >> ~/.ssh/config
-        echo '  ServerAliveCountMax 60' >> ~/.ssh/config
+        echo '  ServerAliveInterval 10' >> ~/.ssh/config
+        echo '  ServerAliveCountMax 300' >> ~/.ssh/config
   build:
     commands:
       # install
