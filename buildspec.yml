@@ -25,6 +25,8 @@ phases:
       - |
         ACCOUNT=$(aws sts get-caller-identity --query 'Account' --output text)
         PREPROD_IMAGE="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO"
+        PR_NUM=$(echo $CODEBUILD_WEBHOOK_TRIGGER | grep -o '[0-9]\+')
+        echo "**** $CODEBUILD_WEBHOOK_TRIGGER $PR_NUM ******"
       # keep ssh connection alive when communicating with remote ec2 server during integ test
       # largest connection idle time allowed: 10 seconds * 300 attempts = 50 minutes
       - |
@@ -117,11 +119,11 @@ phases:
         if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "ray/*"; then
           printf "$SETUP_CMDS" > $SETUP_FILE
           cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit coach --framework mxnet --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_GPU_TAG --processor gpu"
-          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --setup-file $SETUP_FILE
+          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --setup-file $SETUP_FILE --pr-number $PR_NUM
           cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit coach --framework tensorflow  --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_GPU_TAG --processor gpu"
-          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --skip-setup
+          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --pr-number $PR_NUM --skip-setup
           cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit ray --framework tensorflow --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_GPU_TAG --processor gpu"
-          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --skip-setup
+          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --pr-number $PR_NUM --skip-setup
         else
           echo "skipping coach gpu integration tests"
         fi
