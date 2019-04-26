@@ -25,6 +25,7 @@ phases:
       - |
         ACCOUNT=$(aws sts get-caller-identity --query 'Account' --output text)
         PREPROD_IMAGE="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO"
+        PR_NUM=$(echo $CODEBUILD_SOURCE_VERSION | grep -o '[0-9]\+')
       # keep ssh connection alive when communicating with remote ec2 server during integ test
       # largest connection idle time allowed: 10 seconds * 300 attempts = 50 minutes
       - |
@@ -95,7 +96,7 @@ phases:
       # run cpu integration tests
       - echo "run cpu integration tests"
       - |
-        if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "ray/*"; then
+        if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"; then
           pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_CPU_TAG --framework mxnet --toolkit coach --processor cpu
           pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_CPU_TAG --framework tensorflow  --toolkit coach --processor cpu
           pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_CPU_TAG --framework tensorflow --toolkit ray --processor cpu
@@ -124,14 +125,14 @@ phases:
       # run gpu integration tests
       - echo "run gpu integration tests"
       - |
-        if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "ray/*"; then
+        if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"; then
           printf "$SETUP_CMDS" > $SETUP_FILE
           cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit coach --framework mxnet --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_GPU_TAG --processor gpu"
-          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --setup-file $SETUP_FILE
+          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --setup-file $SETUP_FILE --pr-number $PR_NUM
           cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit coach --framework tensorflow  --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_GPU_TAG --processor gpu"
-          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --skip-setup
+          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --pr-number $PR_NUM --skip-setup
           cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit ray --framework tensorflow --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_GPU_TAG --processor gpu"
-          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --skip-setup
+          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --pr-number $PR_NUM --skip-setup
         else
           echo "skipping coach gpu integration tests"
         fi
@@ -139,7 +140,7 @@ phases:
       # run cpu sagemaker tests
       - echo "run cpu sagemaker tests"
       - |
-        if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "ray/*"; then
+        if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "ray/*" "buildspec.yml"; then
           pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_MXNET_CPU_TAG --framework mxnet --toolkit coach --instance-type $CPU_INSTANCE_TYPE
           pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_TF_CPU_TAG --framework tensorflow --toolkit coach --instance-type $CPU_INSTANCE_TYPE
           pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $RAY_TF_CPU_TAG --framework tensorflow --toolkit ray --instance-type $CPU_INSTANCE_TYPE
@@ -150,7 +151,7 @@ phases:
       # run gpu sagemaker tests
       - echo "run gpu sagemaker tests"
       - |
-        if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "ray/*"; then
+        if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "ray/*" "buildspec.yml"; then
           pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_MXNET_GPU_TAG --framework mxnet --toolkit coach --instance-type $GPU_INSTANCE_TYPE
           pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_TF_GPU_TAG --framework tensorflow --toolkit coach --instance-type $GPU_INSTANCE_TYPE
           pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $RAY_TF_GPU_TAG --framework tensorflow --toolkit ray --instance-type $GPU_INSTANCE_TYPE
