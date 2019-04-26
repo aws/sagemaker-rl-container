@@ -25,8 +25,8 @@ phases:
       - |
         ACCOUNT=$(aws sts get-caller-identity --query 'Account' --output text)
         PREPROD_IMAGE="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO"
-        PR_NUM=$(echo $CODEBUILD_WEBHOOK_TRIGGER | grep -o '[0-9]\+')
-        echo "**** $CODEBUILD_WEBHOOK_TRIGGER $PR_NUM ******"
+        PR_NUM=$(echo $CODEBUILD_SOURCE_VERSION | grep -o '[0-9]\+')
+        echo "**** $CODEBUILD_SOURCE_VERSION $PR_NUM ******"
       # keep ssh connection alive when communicating with remote ec2 server during integ test
       # largest connection idle time allowed: 10 seconds * 300 attempts = 50 minutes
       - |
