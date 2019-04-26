@@ -117,7 +117,7 @@ To build RL Docker image:
     # Example
 
     # Ray TensorFlow CPU
-    docker build -t tf-ray:0.5.3-cpu-py3 -f ray/docker/0.5.3/Dockerfile.tf --build-arg processor=cpu .
+    docker build -t tf-ray:0.6.5-cpu-py3 -f ray/docker/0.6.5/Dockerfile.tf --build-arg processor=cpu .
 
     # Coach TensorFlow GPU
     docker build -t tf-coach:0.11.0-gpu-py3 -f coach/docker/0.11.0/Dockerfile.tf --build-arg processor=gpu .
@@ -239,10 +239,10 @@ TensorFlow Coach Images:
 
 TensorFlow Ray Images:
 
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.5-cpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.5.3-cpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.5-gpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.5.3-gpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6-cpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6.5-cpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6-gpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6.5-gpu-py3
 
 
 `List of supported SageMaker regions <https://docs.aws.amazon.com/general/latest/gr/rande.html#sagemaker_region>`__.
