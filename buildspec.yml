@@ -77,12 +77,28 @@ phases:
       - RAY_TF_CPU_TAG="ray-$RAY_TF_TOOKIT_VERSION-tf-cpu-py$PY_VERSION-$BUILD_ID"
       - docker build -t $PREPROD_IMAGE:$RAY_TF_CPU_TAG -f ray/docker/$RAY_TF_TOOKIT_VERSION/Dockerfile.tf --build-arg processor=cpu .
 
+      # build gpu images
+      - echo "build gpu images"
+      - COACH_MXNET_GPU_TAG="coach-$COACH_MXNET_TOOLKIT_VERSION-mxnet-gpu-py$PY_VERSION-$BUILD_ID"
+      - docker build -t $PREPROD_IMAGE:$COACH_MXNET_GPU_TAG -f coach/docker/$COACH_MXNET_TOOLKIT_VERSION/Dockerfile.mxnet --build-arg processor=gpu .
+      - COACH_TF_GPU_TAG="coach-$COACH_TF_TOOLKIT_VERSION-tf-gpu-py$PY_VERSION-$BUILD_ID"
+      - docker build -t $PREPROD_IMAGE:$COACH_TF_GPU_TAG -f coach/docker/$COACH_TF_TOOLKIT_VERSION/Dockerfile.tf --build-arg processor=gpu .
+      - RAY_TF_GPU_TAG="ray-$RAY_TF_TOOKIT_VERSION-tf-gpu-py$PY_VERSION-$BUILD_ID"
+      - docker build -t $PREPROD_IMAGE:$RAY_TF_GPU_TAG -f ray/docker/$RAY_TF_TOOKIT_VERSION/Dockerfile.tf --build-arg processor=gpu .
+
       # push cpu images to ecr
       - echo "push cpu images to ecr"
       - $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
       - docker push $PREPROD_IMAGE:$COACH_MXNET_CPU_TAG
       - docker push $PREPROD_IMAGE:$COACH_TF_CPU_TAG
       - docker push $PREPROD_IMAGE:$RAY_TF_CPU_TAG
+
+      # push gpu images to ecr
+      - echo "push gpu images to ecr"
+      - $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
+      - docker push $PREPROD_IMAGE:$COACH_MXNET_GPU_TAG
+      - docker push $PREPROD_IMAGE:$COACH_TF_GPU_TAG
+      - docker push $PREPROD_IMAGE:$RAY_TF_GPU_TAG
 
       # run cpu integration tests
       - echo "run cpu integration tests"
@@ -94,22 +110,6 @@ phases:
         else
           echo "skipping cpu integration tests"
         fi
-
-      # build gpu images
-      - echo "build gpu images"
-      - COACH_MXNET_GPU_TAG="coach-$COACH_MXNET_TOOLKIT_VERSION-mxnet-gpu-py$PY_VERSION-$BUILD_ID"
-      - docker build -t $PREPROD_IMAGE:$COACH_MXNET_GPU_TAG -f coach/docker/$COACH_MXNET_TOOLKIT_VERSION/Dockerfile.mxnet --build-arg processor=gpu .
-      - COACH_TF_GPU_TAG="coach-$COACH_TF_TOOLKIT_VERSION-tf-gpu-py$PY_VERSION-$BUILD_ID"
-      - docker build -t $PREPROD_IMAGE:$COACH_TF_GPU_TAG -f coach/docker/$COACH_TF_TOOLKIT_VERSION/Dockerfile.tf --build-arg processor=gpu .
-      - RAY_TF_GPU_TAG="ray-$RAY_TF_TOOKIT_VERSION-tf-gpu-py$PY_VERSION-$BUILD_ID"
-      - docker build -t $PREPROD_IMAGE:$RAY_TF_GPU_TAG -f ray/docker/$RAY_TF_TOOKIT_VERSION/Dockerfile.tf --build-arg processor=gpu .
-
-      # push gpu images to ecr
-      - echo "push gpu images to ecr"
-      - $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
-      - docker push $PREPROD_IMAGE:$COACH_MXNET_GPU_TAG
-      - docker push $PREPROD_IMAGE:$COACH_TF_GPU_TAG
-      - docker push $PREPROD_IMAGE:$RAY_TF_GPU_TAG
 
       # run gpu integration tests
       - echo "run gpu integration tests"
