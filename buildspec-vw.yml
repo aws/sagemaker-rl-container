@@ -1,0 +1,97 @@
+version: 0.2
+
+env:
+  variables:
+    CPU_INSTANCE_TYPE: 'ml.c4.xlarge'
+    BASE_IMAGE_ACCOUNT: '462105765813'             # base image account/repo info for faster builds
+    BASE_IMAGE_REPO: 'sagemaker-rl-vw-container'   # repo name for image in that account.
+    PREPROD_ECR_REPO: 'sagemaker-test'
+    PROD_ECR_REPO: 'sagemaker-rl-vw-container'
+    SETUP_FILE: 'setup_cmds.sh'
+    SETUP_CMDS: '#!/bin/bash\npip install --upgrade pip\npip install -U -e .'
+
+
+phases:
+  pre_build:
+    commands:
+      - start-dockerd 
+      - |
+        ACCOUNT=$(aws sts get-caller-identity --query 'Account' --output text)
+        BASE_IMAGE_ECR_REPO="$BASE_IMAGE_ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$BASE_IMAGE_REPO"
+        PREPROD_IMAGE_ECR_REPO="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$PREPROD_ECR_REPO"
+        PROD_IMAGE_ECR_REPO="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$PROD_ECR_REPO"
+        PR_NUM=$(echo $CODEBUILD_SOURCE_VERSION | grep -o '[0-9]\+' | tr -d '\n') 
+        
+        # keep ssh connection alive when communicating with remote ec2 server during integ test
+        # largest connection idle time allowed: 10 seconds * 300 attempts = 50 minutes
+      - |
+        echo '  ServerAliveInterval 10' >> ~/.ssh/config 
+        echo '  ServerAliveCountMax 300' >> ~/.ssh/config 
+      
+      - chmod +x ./scripts/*.sh
+      
+  build:
+    commands:
+      # install dependencies
+      - echo "installing dependencies"
+      - pip3 install -U pytest==4.4.2 pytest-cov pytest-xdist mock tox flake8 sagemaker
+
+      - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION --registry-ids $ACCOUNT)
+      - BUILD_ID="$(echo $CODEBUILD_BUILD_ID | sed -e 's/:/-/g' | tr '[:upper:]' '[:lower:]')"
+
+      # build 8.7.0 new image locally..
+      - echo "build vw-8.7.0 cpu base image locally"
+      - |
+        VW_VERSION="8.7.0"
+        VW_BASE_TAG="vw-$VW_VERSION-cpu"
+        BASE_ECR_IMAGE_WITH_TAG=$BASE_IMAGE_ECR_REPO:$VW_BASE_TAG
+        NEW_IMAGE_TAG="vw-$VW_VERSION-cpu-$BUILD_ID"
+        ./scripts/build.sh \
+          --base-image-account-id $BASE_IMAGE_ACCOUNT \
+          --version-number $VW_VERSION \
+          --local-image-tag $NEW_IMAGE_TAG \
+          --base-image-ecr-repo $BASE_ECR_IMAGE_WITH_TAG
+
+      # push 8.7.0 cpu image to preprod ecr
+      - echo "push vw-8.7.0 new cpu image to preprod ecr"
+      - |
+        PREPROD_ECR_IMAGE_WITH_TAG=$PREPROD_IMAGE_ECR_REPO:$NEW_IMAGE_TAG
+        ./scripts/publish.sh \
+          --local-image-tag $NEW_IMAGE_TAG \
+          --new-ecr-image-tag $PREPROD_ECR_IMAGE_WITH_TAG
+
+      # run cpu integration tests
+      - echo "run cpu integration tests"
+      - |
+        if has-matching-changes "test/" "tests/" "scripts/" "src/*" "docker/*" "vw/*" "buildspec-vw.yml"; then
+          pytest test/integration/local \
+                 -k "test_vw" \
+                 --region $AWS_DEFAULT_REGION \
+                 --docker-image $PREPROD_ECR_IMAGE_WITH_TAG \
+                 --role SageMakerContainerBuildIntegrationTests
+        else
+          echo "skipping cpu integration tests"
+        fi
+
+      # TODO: run cpu sagemaker tests
+      - echo "SageMaker mode cpu integration tests not implemented. "
+
+      # publish cpu image to prod ecr repo if this is release build 
+      - |
+        if is-release-build; then
+          echo "publishing new image to production repo"
+          PROD_ECR_IMAGE_WITH_TAG=$PROD_IMAGE_ECR_REPO:$VW_BASE_TAG
+          ./scripts/publish.sh \
+            --local-image-tag $NEW_IMAGE_TAG \
+            --new-ecr-image-tag $PROD_ECR_IMAGE_WITH_TAG
+        else
+          echo "skipping publishing new image to production repo"
+        fi
+
+
+    finally:
+
+      # remove preprod ecr image
+      - |
+        aws ecr batch-delete-image --repository-name $PREPROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$NEW_IMAGE_TAG
+
