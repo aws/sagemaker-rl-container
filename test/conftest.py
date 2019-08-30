@@ -17,6 +17,7 @@ import os
 import platform
 import shutil
 import tempfile
+from requests import get
 
 import boto3
 import pytest
@@ -35,9 +36,11 @@ SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 
 def pytest_addoption(parser):
     parser.addoption('--docker-base-name')
-    parser.addoption('--framework', choices=['tensorflow', 'mxnet'])
+    parser.addoption('--docker-image')
+    parser.addoption('--framework', choices=['tensorflow', 'mxnet', 'vw'])
     parser.addoption('--region', default='us-west-2')
-    parser.addoption('--toolkit', choices=['coach', 'ray'])
+    parser.addoption('--role', default='SageMakerContainerBuildIntegrationTests')
+    parser.addoption('--toolkit', choices=['coach', 'ray', 'none'])
     parser.addoption('--toolkit-version')
     parser.addoption('--processor', default='cpu', choices=['gpu', 'cpu'])
     parser.addoption('--aws-id')
@@ -54,6 +57,10 @@ def framework(request):
 @pytest.fixture(scope='session')
 def toolkit(request):
     return request.config.getoption('--toolkit')
+
+@pytest.fixture(scope='session')
+def role(request):
+    return request.config.getoption('--role')
 
 
 @pytest.fixture(scope='session')
@@ -105,10 +112,13 @@ def instance_type(request, processor):
     default_instance_type = 'ml.c4.xlarge' if processor == 'cpu' else 'ml.p2.xlarge'
     return provided_instance_type if provided_instance_type is not None else default_instance_type
 
-
 @pytest.fixture(scope='session')
-def docker_image(docker_base_name, tag):
+def docker_image(request, docker_base_name, tag):
+    provided_docker_image = request.config.getoption('--docker-image')
+    if provided_docker_image:
+        return provided_docker_image 
     return '{}:{}'.format(docker_base_name, tag)
+    
 
 
 @pytest.fixture(scope='session')
@@ -141,6 +151,70 @@ def opt_ml():
     # https://forums.docker.com/t/var-folders-isnt-mounted-properly/9600
     opt_ml_dir = '/private{}'.format(tmp) if platform.system() == 'Darwin' else tmp
     yield opt_ml_dir
+
+    shutil.rmtree(tmp, True)
+
+
+def download(url, file_name):
+    print("Downloading %s to %s" % (url, file_name))
+    # open in binary mode
+    with open(file_name, "wb") as file:
+        # get request
+        response = get(url)
+        # write to file
+        file.write(response.content)
+
+
+@pytest.fixture
+def pretrained_model_vw():
+    tmp = tempfile.mkdtemp()
+
+    # Docker cannot mount Mac OS /var folder properly see
+    # https://forums.docker.com/t/var-folders-isnt-mounted-properly/9600
+    if platform.system() == 'Darwin':
+        tmp = '/private{}'.format(tmp)
+
+    file = os.path.join(tmp, "model.tar.gz")
+    download("https://github.com/saurabh3949/Text-Classification-Datasets/raw/master/model.tar.gz", file)
+    
+    tmp = "file://" + tmp
+    yield tmp
+
+    shutil.rmtree(tmp, True)
+
+
+@pytest.fixture
+def training_data_bandits():
+    tmp = tempfile.mkdtemp()
+
+    # Docker cannot mount Mac OS /var folder properly see
+    # https://forums.docker.com/t/var-folders-isnt-mounted-properly/9600
+    if platform.system() == 'Darwin':
+        tmp = '/private{}'.format(tmp)
+
+    file = os.path.join(tmp, "bandits_logged.csv")
+    download("https://github.com/saurabh3949/Text-Classification-Datasets/raw/master/logged_data.csv", file)
+    
+    tmp = "file://" + tmp
+    yield tmp
+
+    shutil.rmtree(tmp, True)
+
+
+@pytest.fixture
+def training_data_supervised():
+    tmp = tempfile.mkdtemp()
+
+    # Docker cannot mount Mac OS /var folder properly see
+    # https://forums.docker.com/t/var-folders-isnt-mounted-properly/9600
+    if platform.system() == 'Darwin':
+        tmp = '/private{}'.format(tmp)
+
+    file = os.path.join(tmp, "statlog_supervised.vw")
+    download("https://github.com/saurabh3949/Text-Classification-Datasets/raw/master/statlog.vw", file)
+    
+    tmp = "file://" + tmp
+    yield tmp
 
     shutil.rmtree(tmp, True)
 

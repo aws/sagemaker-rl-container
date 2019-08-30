@@ -20,9 +20,10 @@ Table of Contents
 -----------------
 
 #. `Getting Started <#getting-started>`__
+#. `RL Images Provided by SageMaker <#rl-images-provided-by-sagemaker>`__
 #. `Building Your Image <#building-your-image>`__
 #. `Running the Tests <#running-the-tests>`__
-#. `RL Images Provided by SageMaker <#rl-images-provided-by-sagemaker>`__
+
 
 Getting Started
 ---------------
@@ -47,21 +48,83 @@ Recommended
    `PyEnv <https://github.com/pyenv/pyenv>`__,
    `VirtualEnv <https://virtualenv.pypa.io/en/stable/>`__)
 
+Terminologies
+~~~~~~~~~~~~~
+
+Toolkit
+^^^^^^^^^^^
+
+Toolkits are libraries that provide specific algorithms to train a Reinforcement Learning model. We currently provide Dockerfiles for these three toolkits:
+
+* `Ray <https://github.com/ray-project/ray>`__
+* `Coach <https://github.com/NervanaSystems/coach>`__
+* `VW <https://github.com/VowpalWabbit/vowpal_wabbit>`__
+
+Framework
+^^^^^^^^^
+
+Framework refers to a Deep Learning framework/library that a toolkit may need in order to train an algorithm. We use Sagemaker created framework images/prebuilt Amazon SageMaker Docker images as base images in a Toolkit's Dockerfile (whenever required). Currently we are using these two frameworks:
+
+* TensorFlow (used for Ray and Coach)
+* MXNet (used for Coach)
+
+Note: VW doesn't require a framework
+
+
+RL Images Provided by SageMaker
+-------------------------------
+
+MXNet Coach Images:
+
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-mxnet:coach0.11-cpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-mxnet:coach0.11.0-cpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-mxnet:coach0.11-gpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-mxnet:coach0.11.0-gpu-py3
+
+TensorFlow Coach Images:
+
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.10-cpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.10.1-cpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.10-gpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.10.1-gpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.11-cpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.11.0-cpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.11.1-cpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.11-gpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.11.0-gpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.11.1-gpu-py3
+
+TensorFlow Ray Images:
+
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6-cpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6.5-cpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6-gpu-py3
+* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6.5-gpu-py3
+
+Vowpal Wabbit Images:
+
+* 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-vw-container:vw-8.7.0-cpu
+
+
+`List of supported SageMaker regions <https://docs.aws.amazon.com/general/latest/gr/rande.html#sagemaker_region>`__.
+
 Building Your Image
 -------------------
 
 `Amazon SageMaker <https://aws.amazon.com/documentation/sagemaker/>`__
 utilizes Docker containers to run all training jobs and inference endpoints.
 
-The Docker images are built from the Dockerfiles specified in
-`coach/docker <https://github.com/aws/sagemaker-rl-container/tree/master/coach/docker>`__
-and `ray/docker <https://github.com/aws/sagemaker-rl-container/tree/master/ray/docker>`__.
+The Docker images are built from the Dockerfiles specified in this repository at:
 
-The Docker files are grouped based on RL toolkit (Coach or Ray), toolkit version and separated
-based on framework, e.g.: ``coach/docker/0.11.0/Dockerfile.mxnet``.
+* `coach/docker <https://github.com/aws/sagemaker-rl-container/tree/master/coach/docker>`__
+* `ray/docker <https://github.com/aws/sagemaker-rl-container/tree/master/ray/docker>`__ 
+* `vw/docker <https://github.com/aws/sagemaker-rl-container/tree/master/vw/docker>`__
+
+The Dockerfiles are grouped by RL toolkit and toolkit version. Within that, they are separated 
+by framework (if needed). For e.g., the Dockerfile for Coach v0.11.0 with MXNet framework can be found at: ``coach/docker/0.11.0/Dockerfile.mxnet``.
 
 
-All Dockerfiles use deep learning framework images provided by SageMaker as their "base" images.
+For toolkits Ray and Coach, the Dockerfiles use deep learning framework images provided by SageMaker as their "base" images.
 
 These "base" images are specified with the following naming convention:
 
@@ -124,6 +187,9 @@ To build RL Docker image:
 
     # Coach MXNet CPU
     docker build -t mxnet-coach:0.11.0-cpu-py3 -f coach/docker/0.11.0/Dockerfile.mxnet --build-arg processor=cpu .
+
+    # VW CPU
+    docker build -t vw:8.7.0-cpu -f vw/docker/8.7.0/Dockerfile .
 
 
 Running the Tests
@@ -211,41 +277,9 @@ SageMaker <https://aws.amazon.com/sagemaker/>`__, then use:
     # Example
     pytest test/integration/sagemaker --toolkit coach \
                                       --aws-id 12345678910 \
-                                       --docker-base-name custom-rl-coach-image \
+                                      --docker-base-name custom-rl-coach-image \
                                       --instance-type ml.m4.xlarge \
                                       --tag 1.0
-
-
-RL Images Provided by SageMaker
--------------------------------
-
-MXNet Coach Images:
-
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-mxnet:coach0.11-cpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-mxnet:coach0.11.0-cpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-mxnet:coach0.11-gpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-mxnet:coach0.11.0-gpu-py3
-
-TensorFlow Coach Images:
-
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.10-cpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.10.1-cpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.10-gpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.10.1-gpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.11-cpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.11.0-cpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.11-gpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.11.0-gpu-py3
-
-TensorFlow Ray Images:
-
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6-cpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6.5-cpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6-gpu-py3
-* 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6.5-gpu-py3
-
-
-`List of supported SageMaker regions <https://docs.aws.amazon.com/general/latest/gr/rande.html#sagemaker_region>`__.
 
 
 Contributing
@@ -259,4 +293,6 @@ requests to us.
 License
 -------
 
-This library is licensed under the Apache 2.0 License.
+This library is licensed under the Apache 2.0 License. 
+
+Note: Specific license for Toolkits/Frameworks, if any, can be found in <toolkit>/docker/LICENSE or in the Framework's image
