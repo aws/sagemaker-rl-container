@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   variables:
-    CPU_INSTANCE_TYPE: 'ml.c4.xlarge'
+    CPU_INSTANCE_TYPE: 'ml.c4.xlarge'              # Note: c4.xlarge might not be available in all regions.
     BASE_IMAGE_ACCOUNT: '462105765813'             # base image account/repo info for faster builds
     BASE_IMAGE_REPO: 'sagemaker-rl-vw-container'   # repo name for image in that account.
     PREPROD_ECR_REPO: 'sagemaker-test'
