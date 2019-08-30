@@ -63,13 +63,13 @@ class ModelManager():
         self.experiment_id = os.getenv(environment.EXPERIMENT_ID, "default_experiment")
         self.model_id = os.getenv(environment.MODEL_ID, "default_model")
 
-        self.poll_db = os.getenv(environment.MODEL_METADATA_POLLING, 'true').lower() == 'true'
+        self.poll_db = os.getenv(environment.MODEL_METADATA_POLLING, 'false').lower() == 'true'
 
         if self.poll_db:
             self._setup_boto_clients()
 
         self.log_inference_data = os.getenv(
-            environment.LOG_INFERENCE_DATA, 'true').lower() == 'true'
+            environment.LOG_INFERENCE_DATA, 'false').lower() == 'true'
         if self.log_inference_data:
             self.firehost_stream = os.getenv(environment.FIREHOSE_STREAM, None)
             if not self.firehost_stream:
@@ -201,8 +201,7 @@ class ModelManager():
         if self.sagemaker_tar_gz:
             metadata_path, weights_path = self.get_model(disk_path=integ.ARTIFACTS_VOLUME)
         else:
-            # TODO: Download .tar.gz on the fly, decompress and repeat the above
-            metadata, weights = self.get_model(model_id=self.model_id)
+            metadata_path, weights_path = self.get_model(model_id=self.model_id)
 
         redis_client = redis.Redis()
         redis_client.set("model_id", self.model_id)
