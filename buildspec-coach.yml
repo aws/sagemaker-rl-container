@@ -1,0 +1,188 @@
+version: 0.2
+
+env:
+  variables:
+    COACH_TF_TOOLKIT_VERSION: '1.0.0'
+    COACH_TF_FRAMEWORK_VERSION: '1.12.0'
+    CPU_INSTANCE_TYPE: 'ml.c4.xlarge'
+    GPU_INSTANCE_TYPE: 'ml.p2.xlarge'
+    PY_VERSION: '3'
+    BASE_ECR_REPO: 'sagemaker-rl-coach-container'    # previous images repo for layer cache, same name as pro image repo
+    PREPROD_ECR_REPO: 'sagemaker-test'
+    PROD_ECR_REPO: 'sagemaker-rl-coach-container'
+    GITHUB_REPO: 'sagemaker-rl-container'
+    BASE_IMAGE_ACCOUNT: '462105765813'               # base image account/repo info for faster builds
+    FRAMEWORK_BASE_IMAGE_ACCOUNT: '520713654638'     # base image account(tf/mxnet images) required for building rl container images
+    SETUP_FILE: 'setup_cmds.sh'
+    SETUP_CMDS: '#!/bin/bash\npip install --upgrade pip\npip install -U -e .'
+
+
+phases:
+  pre_build:
+    commands:
+      - start-dockerd
+      - |
+        ACCOUNT=$(aws sts get-caller-identity --query 'Account' --output text)
+        BASE_IMAGE="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$BASE_ECR_REPO"
+        PREPROD_IMAGE="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$PREPROD_ECR_REPO"
+        PROD_IMAGE="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$PROD_ECR_REPO"
+        # PR_NUM=$(echo $CODEBUILD_SOURCE_VERSION | grep -o '[0-9]\+')
+      # keep ssh connection alive when communicating with remote ec2 server during integ test
+      # largest connection idle time allowed: 10 seconds * 300 attempts = 50 minutes
+      - |
+        echo '  ServerAliveInterval 10' >> ~/.ssh/config
+        echo '  ServerAliveCountMax 300' >> ~/.ssh/config
+  build:
+    commands:
+      # install
+      - echo "install"
+      - pip3 install -U -e .
+
+      # # launch remote gpu instance
+      - echo "launch remote gpu instance"
+      - |
+        prefix='ml.'
+        instance_type=${GPU_INSTANCE_TYPE#"$prefix"}
+      - create-key-pair
+      - launch-ec2-instance --instance-type $instance_type --ami-name dlami-ubuntu
+
+      - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION --registry-ids $FRAMEWORK_BASE_IMAGE_ACCOUNT)
+      - |
+        TF_IMAGE="$FRAMEWORK_BASE_IMAGE_ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/sagemaker-tensorflow-scriptmode"
+        BUILD_ID="$(echo $CODEBUILD_BUILD_ID | sed -e 's/:/-/g')"
+
+      # # pull cpu base images
+      - echo "pull cpu base images"
+      - |
+        COACH_TF_CPU_BASE_TAG="$COACH_TF_FRAMEWORK_VERSION-cpu-py$PY_VERSION"
+        docker pull $TF_IMAGE:$COACH_TF_CPU_BASE_TAG
+
+      # pull gpu base images
+      - echo "pull gpu base images"
+      - |
+        COACH_TF_GPU_BASE_TAG="$COACH_TF_FRAMEWORK_VERSION-gpu-py$PY_VERSION"
+        docker pull $TF_IMAGE:$COACH_TF_GPU_BASE_TAG
+
+      # # build coach preprod cpu images
+      - echo "build coach preprod cpu images"
+      - |
+        COACH_TF_CPU_TAG="coach-$COACH_TF_TOOLKIT_VERSION-tf-cpu-py$PY_VERSION"
+        COACH_TF_CPU_TAG_BUILD_ID="coach-$COACH_TF_TOOLKIT_VERSION-tf-cpu-py$PY_VERSION-$BUILD_ID"
+
+        echo "pulling previous_image $BASE_IMAGE:$COACH_TF_CPU_TAG for layer cache..."
+        $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
+        docker pull $BASE_IMAGE:$COACH_TF_CPU_TAG
+        docker build --cache-from $BASE_IMAGE:$COACH_TF_CPU_TAG \
+                     -t $PREPROD_IMAGE:$COACH_TF_CPU_TAG_BUILD_ID \
+                     -f coach/docker/$COACH_TF_TOOLKIT_VERSION/Dockerfile.tf \
+                     --build-arg processor=cpu .
+
+      # # push coach preprod cpu images to ecr
+      - echo "push coach preprod cpu images to ecr"
+      - |
+        $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
+        docker push $PREPROD_IMAGE:$COACH_TF_CPU_TAG_BUILD_ID
+
+      # # run cpu integration tests for coach preprod cpu images
+      - echo "run cpu integration tests for coach preprod cpu images"
+      - |
+        if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "buildspec-coach.yml"; then
+          pytest test/integration/local \
+                  -k "test_coach" \
+                  --region $AWS_DEFAULT_REGION \
+                  --docker-base-name $PREPROD_IMAGE \
+                  --tag $COACH_TF_CPU_TAG_BUILD_ID \
+                  --framework tensorflow  \
+                  --toolkit coach \
+                  --processor cpu
+        else
+          echo "skipping cpu integration tests"
+        fi
+
+      # build coach preprod gpu images
+      - echo "build coach preprod gpu images"
+      - |
+        COACH_TF_GPU_TAG="coach-$COACH_TF_TOOLKIT_VERSION-tf-gpu-py$PY_VERSION"
+        COACH_TF_GPU_TAG_BUILD_ID="coach-$COACH_TF_TOOLKIT_VERSION-tf-gpu-py$PY_VERSION-$BUILD_ID"
+
+        echo "pulling previous_image $BASE_IMAGE:$COACH_TF_GPU_TAG for layer cache..."
+        $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
+        docker pull $BASE_IMAGE:$COACH_TF_GPU_TAG
+        docker build --cache-from $BASE_IMAGE:$COACH_TF_GPU_TAG \
+                     -t $PREPROD_IMAGE:$COACH_TF_GPU_TAG_BUILD_ID \
+                     -f coach/docker/$COACH_TF_TOOLKIT_VERSION/Dockerfile.tf \
+                     --build-arg processor=gpu .
+
+      # push coach preprod gpu images to ecr
+      - echo "push coach preprod gpu images to ecr"
+      - |
+        $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
+        docker push $PREPROD_IMAGE:$COACH_TF_GPU_TAG_BUILD_ID
+
+      # run gpu integration tests for coach preprod gpu images
+      - echo "run gpu integration tests for coach preprod gpu images"
+      - |
+        if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "buildspec-coach.yml"; then
+          printf "$SETUP_CMDS" > $SETUP_FILE
+          cmd="pytest test/integration/local -k 'test_coach' --region $AWS_DEFAULT_REGION --toolkit coach --framework tensorflow  --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_GPU_TAG_BUILD_ID --processor gpu"
+          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --setup-file $SETUP_FILE
+        else
+          echo "skipping coach gpu integration tests"
+        fi
+
+      # # run cpu sagemaker tests
+      - echo "run cpu sagemaker tests for coach preprod cpu images"
+      - |
+        if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "buildspec-coach.yml"; then
+          pytest test/integration/sagemaker \
+                  -k "test_coach" \
+                  --region $AWS_DEFAULT_REGION \
+                  --docker-base-name $PREPROD_ECR_REPO \
+                  --aws-id $ACCOUNT \
+                  --tag $COACH_TF_CPU_TAG_BUILD_ID \
+                  --framework tensorflow \
+                  --toolkit coach \
+                  --instance-type $CPU_INSTANCE_TYPE
+        else
+          echo "skipping cpu sagemaker tests"
+        fi
+
+      # run gpu sagemaker tests
+      - echo "run gpu sagemaker tests"
+      - |
+        if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "buildspec-coach.yml"; then
+          pytest test/integration/sagemaker \
+                  -k "test_coach" \
+                  --region $AWS_DEFAULT_REGION \
+                  --docker-base-name $PREPROD_ECR_REPO \
+                  --aws-id $ACCOUNT \
+                  --tag $COACH_TF_GPU_TAG_BUILD_ID \
+                  --framework tensorflow \
+                  --toolkit coach \
+                  --instance-type $GPU_INSTANCE_TYPE
+        else
+          echo "skipping gpu sagemaker tests"
+        fi
+
+      # publish cpu and gpu image to prod ecr repo if this is release build 
+      - |
+        if is-release-build; then
+          $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
+          docker tag $PREPROD_IMAGE:$COACH_TF_CPU_TAG_BUILD_ID $PROD_IMAGE:$COACH_TF_CPU_TAG
+          docker push $PROD_IMAGE:$COACH_TF_CPU_TAG
+
+          docker tag $PREPROD_IMAGE:$COACH_TF_GPU_TAG_BUILD_ID $PROD_IMAGE:$COACH_TF_GPU_TAG
+          docker push $PROD_IMAGE:$COACH_TF_GPU_TAG
+        else
+          echo "skipping publishing new image to production repo"
+        fi
+
+    finally:
+      # shut down remote gpu instance
+      - cleanup-gpu-instances
+      - cleanup-key-pairs
+
+      # remove ecr image
+      - |
+        aws ecr batch-delete-image --repository-name $PREPROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$COACH_TF_CPU_TAG_BUILD_ID
+        aws ecr batch-delete-image --repository-name $PREPROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$COACH_TF_GPU_TAG_BUILD_ID
