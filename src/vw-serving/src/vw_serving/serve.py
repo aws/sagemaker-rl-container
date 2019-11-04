@@ -30,7 +30,7 @@ from vw_serving.sagemaker.exceptions import convert_to_algorithm_error, raise_wi
 from vw_serving.sagemaker.config.server_config import BaseServerConfig
 import vw_serving.sagemaker.config.environment as environment
 
-from vw_serving.vw_model import VWModel
+from vw_serving.vw_agent import VWAgent
 
 # TODO: Add metrics publishing
 # from vw_serving.metrics import metrics_wrapper
@@ -228,10 +228,10 @@ class ScoringService(object):
                 cls._model_id = redis_client.get("model_id").decode()
                 model_weights_loc = redis_client.get("{}:weights".format(cls._model_id)).decode()
                 model_metadata_loc = redis_client.get("{}:metadata".format(cls._model_id)).decode()
-                cls._model = VWModel.load_vw_model(metadata_loc=model_metadata_loc,
-                                                   weights_loc=model_weights_loc,
-                                                   test_only=True,
-                                                   quiet_mode=True)
+                cls._model = VWAgent.load_model(metadata_loc=model_metadata_loc,
+                                                weights_loc=model_weights_loc,
+                                                test_only=True,
+                                                quiet_mode=True)
                 cls.app.logger.info(f"Loaded weights successfully for Model ID:{cls._model_id}")
             except Exception as e:
                 raise_with_traceback(InferenceCustomerError("Unable to load model", caused_by=e))
@@ -439,7 +439,9 @@ def invocations():
                               content_type="application/json")
 
     else:
-        observation = data["observation"]
+        shared_context = data.get("shared_context", None)
+        actions_context = data.get("actions_context", None)
+        top_k = int(data.get("top_k", 1))
 
         try:
             model = ScoringService.get_model()
@@ -452,24 +454,24 @@ def invocations():
         event_id = uuid.uuid1().int
         dt = datetime.datetime.now()
         timestamp = int(dt.strftime("%s"))
-        action_probs = model.predict(observation)
-        nchoices = len(action_probs)
-        action_probs = (action_probs / action_probs.sum())
-        action = np.random.choice(nchoices, p=action_probs) + 1
-        action_prob = action_probs[action - 1]
-        # add sample_prob for later dataset sampling
+
+        top_k_action_indices, action_probs = model.choose_actions(user_embedding=shared_context,
+                                                                  candidate_embeddings=actions_context,
+                                                                  top_k=top_k)
         sample_prob = random.uniform(0.0, 1.0)
 
-        response_payload = json.dumps({"action": action,
-                                       "action_prob": action_prob,
+        response_payload = json.dumps({"actions": top_k_action_indices,
+                                       "action_probs": action_probs,
                                        "event_id": event_id,
                                        "timestamp": timestamp,
                                        "sample_prob": sample_prob,
                                        "model_id": ScoringService._model_id})
-        blob_to_log = json.dumps({"action": action,
-                                  "action_prob": action_prob,
+
+        blob_to_log = json.dumps({"actions": top_k_action_indices,
+                                  "action_probs": action_probs,
                                   "event_id": event_id,
-                                  "observation": observation,
+                                  "shared_context": shared_context,
+                                  "actions_context": actions_context,
                                   "timestamp": timestamp,
                                   "model_id": ScoringService._model_id,
                                   "sample_prob": sample_prob,

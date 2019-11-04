@@ -230,7 +230,7 @@ class ModelManager():
                         # Delete the old model
                         redis_client.delete(self.model_id)
                         redis_client.delete("{}:weights".format(self.model_id))
-                        redis_client.delete("{}:weights".format(self.model_id))
+                        redis_client.delete("{}:metadata".format(self.model_id))
 
                         self.model_id = next_model_to_host_id
                         redis_client.set("model_id", self.model_id)
