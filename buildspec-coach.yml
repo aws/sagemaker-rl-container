@@ -38,13 +38,14 @@ phases:
       - echo "install"
       - pip3 install -U -e .
 
+      # skip key-pari and gpu instance creation 
       # # launch remote gpu instance
-      - echo "launch remote gpu instance"
-      - |
-        prefix='ml.'
-        instance_type=${GPU_INSTANCE_TYPE#"$prefix"}
-      - create-key-pair
-      - launch-ec2-instance --instance-type $instance_type --ami-name dlami-ubuntu
+      # - echo "launch remote gpu instance"
+      # - |
+      #   prefix='ml.'
+      #   instance_type=${GPU_INSTANCE_TYPE#"$prefix"}
+      # - create-key-pair
+      # - launch-ec2-instance --instance-type $instance_type --ami-name dlami-ubuntu
 
       - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION --registry-ids $FRAMEWORK_BASE_IMAGE_ACCOUNT)
       - |
@@ -180,8 +181,8 @@ phases:
 
     finally:
       # shut down remote gpu instance
-      - cleanup-gpu-instances
-      - cleanup-key-pairs
+      # - cleanup-gpu-instances
+      # - cleanup-key-pairs
 
       # remove ecr image
       - |
