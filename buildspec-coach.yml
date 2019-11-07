@@ -38,14 +38,17 @@ phases:
       - echo "install"
       - pip3 install -U -e .
 
-      # skip key-pari and gpu instance creation 
-      # # launch remote gpu instance
-      # - echo "launch remote gpu instance"
-      # - |
-      #   prefix='ml.'
-      #   instance_type=${GPU_INSTANCE_TYPE#"$prefix"}
-      # - create-key-pair
-      # - launch-ec2-instance --instance-type $instance_type --ami-name dlami-ubuntu
+      # launch remote gpu instance only in region us-west-2
+      - |
+        if [ "$AWS_DEFAULT_REGION" == "us-west-2" ]; then
+          echo "launch remote gpu instance"
+          prefix='ml.'
+          instance_type=${GPU_INSTANCE_TYPE#"$prefix"}
+          create-key-pair
+          launch-ec2-instance --instance-type $instance_type --ami-name dlami-ubuntu
+        else
+          echo "skipping launch remote gpu instance"
+        fi
 
       - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION --registry-ids $FRAMEWORK_BASE_IMAGE_ACCOUNT)
       - |
@@ -85,7 +88,7 @@ phases:
         docker push $PREPROD_IMAGE:$COACH_TF_CPU_TAG_BUILD_ID
 
       # # run cpu integration tests for coach preprod cpu images
-      - echo "run cpu integration tests for coach preprod cpu images"
+      - echo "run local cpu integration tests for coach preprod cpu images"
       - |
         if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "buildspec-coach.yml"; then
           pytest test/integration/local \
@@ -97,7 +100,7 @@ phases:
                   --toolkit coach \
                   --processor cpu
         else
-          echo "skipping cpu integration tests"
+          echo "skipping local cpu integration tests"
         fi
 
       # build coach preprod gpu images
@@ -120,17 +123,16 @@ phases:
         $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
         docker push $PREPROD_IMAGE:$COACH_TF_GPU_TAG_BUILD_ID
 
-      # skip gpu integration local test for preprod images due to unknown reasons of socket timeout
-      # run gpu integration tests for coach preprod gpu images
-      # - echo "run gpu integration tests for coach preprod gpu images"
-      # - |
-      #   if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "buildspec-coach.yml"; then
-      #     printf "$SETUP_CMDS" > $SETUP_FILE
-      #     cmd="pytest test/integration/local -k 'test_coach' --region $AWS_DEFAULT_REGION --toolkit coach --framework tensorflow  --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_GPU_TAG_BUILD_ID --role SageMakerContainerBuildIntegrationTests --processor gpu"
-      #     remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --setup-file $SETUP_FILE
-      #   else
-      #     echo "skipping coach gpu integration tests"
-      #   fi
+      # run gpu integration tests for coach preprod gpu images only in us-west-2
+      - echo "run local gpu integration tests for coach preprod gpu images"
+      - |
+        if [has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "buildspec-coach.yml"] && [ "$AWS_DEFAULT_REGION" == "us-west-2" ]; then
+          printf "$SETUP_CMDS" > $SETUP_FILE
+          cmd="pytest test/integration/local -k 'test_coach' --region $AWS_DEFAULT_REGION --toolkit coach --framework tensorflow  --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_GPU_TAG_BUILD_ID --role SageMakerContainerBuildIntegrationTests --processor gpu"
+          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --setup-file $SETUP_FILE
+        else
+          echo "skipping local gpu integration tests"
+        fi
 
       # # run cpu sagemaker tests
       - echo "run cpu sagemaker tests for coach preprod cpu images"
@@ -180,9 +182,15 @@ phases:
         fi
 
     finally:
-      # shut down remote gpu instance
-      # - cleanup-gpu-instances
-      # - cleanup-key-pairs
+      # only shut down remote gpu instance if in us-west-2
+      - |
+        if [ "$AWS_DEFAULT_REGION" == "us-west-2" ]; then
+          echo "cleanup remote gpu instance"
+          cleanup-gpu-instances
+          cleanup-key-pairs
+        else
+          echo "No remote gpu instance to cleanup"
+        fi
 
       # remove ecr image
       - |
