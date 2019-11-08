@@ -1,5 +1,6 @@
 ARG processor
-FROM 520713654638.dkr.ecr.us-west-2.amazonaws.com/sagemaker-tensorflow-scriptmode:1.12.0-$processor-py3
+ARG region
+FROM 520713654638.dkr.ecr.$region.amazonaws.com/sagemaker-tensorflow-scriptmode:1.12.0-$processor-py3
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
