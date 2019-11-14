@@ -40,7 +40,7 @@ phases:
 
       # launch remote gpu instance only in region us-west-2
       - |
-        if [ "$AWS_DEFAULT_REGION" == "us-west-2" ]; then
+        if [ "$AWS_DEFAULT_REGION" = "us-west-2" ]; then
           echo "launch remote gpu instance"
           prefix='ml.'
           instance_type=${GPU_INSTANCE_TYPE#"$prefix"}
@@ -79,7 +79,8 @@ phases:
         docker build --cache-from $BASE_IMAGE:$COACH_TF_CPU_TAG \
                      -t $PREPROD_IMAGE:$COACH_TF_CPU_TAG_BUILD_ID \
                      -f coach/docker/$COACH_TF_TOOLKIT_VERSION/Dockerfile.tf \
-                     --build-arg processor=cpu .
+                     --build-arg processor=cpu \
+                     --build-arg region=$AWS_DEFAULT_REGION .
 
       # # push coach preprod cpu images to ecr
       - echo "push coach preprod cpu images to ecr"
@@ -115,7 +116,8 @@ phases:
         docker build --cache-from $BASE_IMAGE:$COACH_TF_GPU_TAG \
                      -t $PREPROD_IMAGE:$COACH_TF_GPU_TAG_BUILD_ID \
                      -f coach/docker/$COACH_TF_TOOLKIT_VERSION/Dockerfile.tf \
-                     --build-arg processor=gpu .
+                     --build-arg processor=gpu \
+                     --build-arg region=$AWS_DEFAULT_REGION .
 
       # push coach preprod gpu images to ecr
       - echo "push coach preprod gpu images to ecr"
@@ -126,10 +128,12 @@ phases:
       # run gpu integration tests for coach preprod gpu images only in us-west-2
       - echo "run local gpu integration tests for coach preprod gpu images"
       - |
-        if [has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "buildspec-coach.yml"] && [ "$AWS_DEFAULT_REGION" == "us-west-2" ]; then
-          printf "$SETUP_CMDS" > $SETUP_FILE
-          cmd="pytest test/integration/local -k 'test_coach' --region $AWS_DEFAULT_REGION --toolkit coach --framework tensorflow  --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_GPU_TAG_BUILD_ID --role SageMakerContainerBuildIntegrationTests --processor gpu"
-          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --setup-file $SETUP_FILE
+        if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "buildspec-coach.yml"; then
+          if [ "$AWS_DEFAULT_REGION" = "us-west-2" ]; then
+            printf "$SETUP_CMDS" > $SETUP_FILE
+            cmd="pytest test/integration/local -k 'test_coach' --region $AWS_DEFAULT_REGION --toolkit coach --framework tensorflow  --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_GPU_TAG_BUILD_ID --processor gpu"
+            remote-test --github-repo $GITHUB_REPO --branch coach-1.0.0 --test-cmd "$cmd" --setup-file $SETUP_FILE
+          fi
         else
           echo "skipping local gpu integration tests"
         fi
@@ -155,15 +159,17 @@ phases:
       - echo "run gpu sagemaker tests"
       - |
         if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "buildspec-coach.yml"; then
-          pytest test/integration/sagemaker \
-                  -k "test_coach" \
-                  --region $AWS_DEFAULT_REGION \
-                  --docker-base-name $PREPROD_ECR_REPO \
-                  --aws-id $ACCOUNT \
-                  --tag $COACH_TF_GPU_TAG_BUILD_ID \
-                  --framework tensorflow \
-                  --toolkit coach \
-                  --instance-type $GPU_INSTANCE_TYPE
+          if [ "$AWS_DEFAULT_REGION" = "us-west-2" ]; then
+            pytest test/integration/sagemaker \
+                    -k "test_coach" \
+                    --region $AWS_DEFAULT_REGION \
+                    --docker-base-name $PREPROD_ECR_REPO \
+                    --aws-id $ACCOUNT \
+                    --tag $COACH_TF_GPU_TAG_BUILD_ID \
+                    --framework tensorflow \
+                    --toolkit coach \
+                    --instance-type $GPU_INSTANCE_TYPE
+          fi
         else
           echo "skipping gpu sagemaker tests"
         fi
@@ -184,7 +190,7 @@ phases:
     finally:
       # only shut down remote gpu instance if in us-west-2
       - |
-        if [ "$AWS_DEFAULT_REGION" == "us-west-2" ]; then
+        if [ "$AWS_DEFAULT_REGION" = "us-west-2" ]; then
           echo "cleanup remote gpu instance"
           cleanup-gpu-instances
           cleanup-key-pairs
