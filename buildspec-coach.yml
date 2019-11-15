@@ -132,7 +132,7 @@ phases:
           if [ "$AWS_DEFAULT_REGION" = "us-west-2" ]; then
             printf "$SETUP_CMDS" > $SETUP_FILE
             cmd="pytest test/integration/local -k 'test_coach' --region $AWS_DEFAULT_REGION --toolkit coach --framework tensorflow  --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_GPU_TAG_BUILD_ID --processor gpu"
-            remote-test --github-repo $GITHUB_REPO --branch coach-1.0.0 --test-cmd "$cmd" --setup-file $SETUP_FILE
+            remote-test --github-repo $GITHUB_REPO --branch master --test-cmd "$cmd" --setup-file $SETUP_FILE
           fi
         else
           echo "skipping local gpu integration tests"
