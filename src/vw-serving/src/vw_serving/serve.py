@@ -442,6 +442,7 @@ def invocations():
         shared_context = data.get("shared_context", None)
         actions_context = data.get("actions_context", None)
         top_k = int(data.get("top_k", 1))
+        user_id = int(data.get("user_id", 0))
 
         try:
             model = ScoringService.get_model()
@@ -457,7 +458,7 @@ def invocations():
 
         top_k_action_indices, action_probs = model.choose_actions(user_embedding=shared_context,
                                                                   candidate_embeddings=actions_context,
-                                                                  top_k=top_k)
+                                                                  top_k=top_k, user_id=user_id)
         sample_prob = random.uniform(0.0, 1.0)
 
         response_payload = json.dumps({"actions": top_k_action_indices,

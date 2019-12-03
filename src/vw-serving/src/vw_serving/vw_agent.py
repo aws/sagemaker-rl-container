@@ -133,6 +133,12 @@ class VWAgent:
             shared_vw_features = self.transform_context(user_embedding)
             shared_feature_dim = len(user_embedding)
 
+        if user_id is not None:
+            if shared_vw_features:
+                shared_vw_features += " user_%s" % user_id
+            else:
+                shared_vw_features = "user_%s" % user_id
+                
         start_index = shared_feature_dim + 1
         num_actions = self.num_actions
         if candidate_embeddings is not None:
@@ -208,6 +214,12 @@ class VWAgent:
         if user_embedding is not None:
             shared_vw_features = self.transform_context(user_embedding)
             shared_feature_dim = len(user_embedding)
+
+        if user_id is not None:
+            if shared_vw_features:
+                shared_vw_features += " user_%s" % user_id
+            else:
+                shared_vw_features = "user_%s" % user_id
 
         start_index = shared_feature_dim + 1
         num_actions = self.num_actions
