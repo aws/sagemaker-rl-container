@@ -1,0 +1,13 @@
+FROM 462105765813.dkr.ecr.eu-west-3.amazonaws.com/sagemaker-rl-vw-container:vw-8.7.0-cpu
+
+
+# Remove old vw serving package
+RUN rm -rf /opt/code/vw-serving
+RUN pip uninstall vw_serving -y
+
+# Install new vw-serving with ADF (action dependent features)
+ADD src/vw-serving /opt/code/vw-serving
+RUN pip install /opt/code/vw-serving
+
+WORKDIR /opt
+
