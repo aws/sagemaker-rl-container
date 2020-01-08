@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import json
+from io import StringIO
 import logging
 import os
 import signal
@@ -400,12 +401,52 @@ def _error_predicate(return_value, exception):
     return exception or status_code_is_not_2xx
 
 
+def _score_json(model, observation, response_content_type=CONTENT_TYPE_JSON):
+    event_id = uuid.uuid1().int
+    dt = datetime.datetime.now()
+    timestamp = int(dt.strftime("%s"))
+    action_probs = model.predict(observation)
+    nchoices = len(action_probs)
+    action_probs = (action_probs / action_probs.sum())
+    action = np.random.choice(nchoices, p=action_probs) + 1
+    action_prob = action_probs[action - 1]
+    # add sample_prob for later dataset sampling
+    sample_prob = random.uniform(0.0, 1.0)
+    if response_content_type in (CONTENT_TYPE_JSON, CONTENT_TYPE_JSONLINES):
+        # convert to JSON
+        response_payload = json.dumps({"action": action,
+                                       "action_prob": action_prob,
+                                       "event_id": event_id,
+                                       "timestamp": timestamp,
+                                       "sample_prob": sample_prob,
+                                       "model_id": ScoringService._model_id})
+    else:
+        # convert to CSV
+        response_payload = ",".join([
+            str(x) for x in
+            [action, action_prob, event_id, timestamp, sample_prob, ScoringService._model_id]
+        ])
+    blob_to_log = json.dumps({"action": action,
+                              "action_prob": action_prob,
+                              "event_id": event_id,
+                              "observation": observation,
+                              "timestamp": timestamp,
+                              "model_id": ScoringService._model_id,
+                              "sample_prob": sample_prob,
+                              "type": "actions"})
+    if ScoringService.LOG_INFERENCE_DATA:
+        # TODO: Log state, action, eventID
+        ScoringService._redis_client.publish(REDIS_PUBLISHER_CHANNEL, blob_to_log)
+    return response_payload
+
+
 @ScoringService.app.route("/invocations", methods=["POST"])
 # @METRICS.count("invocations")
 # @METRICS.count_when("invocations_error", _error_predicate)
 def invocations():
     content_type, content_parameters = ScoringService.parse_content_type(flask.request.content_type)
-    if content_type not in [CONTENT_TYPE_JSON]:
+    response_content_type = flask.request.headers.get("Accept", "application/json")
+    if content_type not in [CONTENT_TYPE_JSON, CONTENT_TYPE_JSONLINES, CONTENT_TYPE_CSV]:
         sdk_error = InferenceCustomerError("Content-type {} not supported".format(content_type))
         ScoringService._report_sdk_error(sdk_error)
         return flask.Response(
@@ -416,70 +457,71 @@ def invocations():
     if len(payload) == 0:
         return flask.Response(response="", status=httplib.NO_CONTENT)
 
-    data = json.loads(payload.decode("utf-8"))
+    try:
+        model = ScoringService.get_model()
+    except Exception as e:
+        sdk_error = convert_to_algorithm_error(e)
+        ScoringService._report_sdk_error(sdk_error)
+        return flask.Response(response="unable to load model", status=httplib.INTERNAL_SERVER_ERROR,
+                              mimetype="application/json", content_type="application/json")
 
-    request_type = data.get("request_type", "observation").lower()
+    if content_type == CONTENT_TYPE_JSON:
+        data = json.loads(payload.decode("utf-8"))
 
-    if request_type == "reward":
-        event_id = data["event_id"]
-        reward = data["reward"]
-        blob_to_log = {"event_id": int(event_id), "reward": float(reward), "type": "rewards"}
-        blob_to_log = json.dumps(blob_to_log)
-        if ScoringService.LOG_INFERENCE_DATA:
-            ScoringService._redis_client.publish(REDIS_PUBLISHER_CHANNEL, blob_to_log)
-            status = "success"
+        request_type = data.get("request_type", "observation").lower()
+
+        if request_type == "reward":
+            event_id = data["event_id"]
+            reward = data["reward"]
+            blob_to_log = {"event_id": int(event_id), "reward": float(reward), "type": "rewards"}
+            blob_to_log = json.dumps(blob_to_log)
+            if ScoringService.LOG_INFERENCE_DATA:
+                ScoringService._redis_client.publish(REDIS_PUBLISHER_CHANNEL, blob_to_log)
+                status = "success"
+            else:
+                status = "failure"
+            return flask.Response(response='{"status": "%s"}' % status, status=httplib.OK)
+
+        elif request_type == "model_id":
+            model_info_payload = json.dumps({"model_id": ScoringService._model_id,
+                                             "soft_model_update_status": "TBD: To be used for indicating rollbacks"})
+            return flask.Response(response=model_info_payload, status=httplib.OK, mimetype="application/json",
+                                  content_type="application/json")
+
         else:
-            status = "failure"
-        return flask.Response(response='{"status": "%s"}' % status, status=httplib.OK)
+            observation = data["observation"]
 
-    elif request_type == "model_id":
-        model_info_payload = json.dumps({"model_id": ScoringService._model_id,
-                                         "soft_model_update_status": "TBD: To be used for indicating rollbacks"})
-        return flask.Response(response=model_info_payload, status=httplib.OK, mimetype="application/json",
-                              content_type="application/json")
-
+            response_payload = _score_json(model, observation)
+            return flask.Response(response=response_payload, status=httplib.OK, mimetype="application/json",
+                                  content_type="application/json")
+    elif content_type == CONTENT_TYPE_JSONLINES:
+        #  Content type is application/jsonlines, which means this is Batch Inference mode
+        data = payload.decode("utf-8")
+        f = StringIO(data)
+        response = [_score_json(model, json.loads(line), response_content_type=response_content_type) for line in f.readlines()]
+        response_payload = "\n".join(response)
+        return flask.Response(response=response_payload, status=httplib.OK, mimetype=response_content_type,
+                              content_type=response_content_type)
     else:
-        observation = data["observation"]
-
-        try:
-            model = ScoringService.get_model()
-        except Exception as e:
-            sdk_error = convert_to_algorithm_error(e)
-            ScoringService._report_sdk_error(sdk_error)
-            return flask.Response(response="unable to load model", status=httplib.INTERNAL_SERVER_ERROR,
-                                  mimetype="application/json", content_type="application/json")
-
-        event_id = uuid.uuid1().int
-        dt = datetime.datetime.now()
-        timestamp = int(dt.strftime("%s"))
-        action_probs = model.predict(observation)
-        nchoices = len(action_probs)
-        action_probs = (action_probs / action_probs.sum())
-        action = np.random.choice(nchoices, p=action_probs) + 1
-        action_prob = action_probs[action - 1]
-        # add sample_prob for later dataset sampling
-        sample_prob = random.uniform(0.0, 1.0)
-
-        response_payload = json.dumps({"action": action,
-                                       "action_prob": action_prob,
-                                       "event_id": event_id,
-                                       "timestamp": timestamp,
-                                       "sample_prob": sample_prob,
-                                       "model_id": ScoringService._model_id})
-        blob_to_log = json.dumps({"action": action,
-                                  "action_prob": action_prob,
-                                  "event_id": event_id,
-                                  "observation": observation,
-                                  "timestamp": timestamp,
-                                  "model_id": ScoringService._model_id,
-                                  "sample_prob": sample_prob,
-                                  "type": "actions"})
-
-        if ScoringService.LOG_INFERENCE_DATA:
-            # TODO: Log state, action, eventID
-            ScoringService._redis_client.publish(REDIS_PUBLISHER_CHANNEL, blob_to_log)
-        return flask.Response(response=response_payload, status=httplib.OK, mimetype="application/json",
-                              content_type="application/json")
+        # content type is csv, batch inference
+        data = payload.decode("utf-8")
+        rows_ = np.genfromtxt(StringIO(data), delimiter=',').astype(float)
+        rows = rows_.tolist()
+        # if this was a single record, we will just have a single list
+        # the loop below expects a list of lists, so pack it up
+        if len(rows_.shape) == 1:
+            rows = [rows]
+        response = [
+            _score_json(
+                model,
+                row,
+                response_content_type=response_content_type
+            )
+            for row in rows
+        ]
+        response_payload = "\n".join(response)
+        return flask.Response(response=response_payload, status=httplib.OK, mimetype=response_content_type,
+                              content_type=response_content_type)
 
 
 @ScoringService.app.route("/execution-parameters", methods=["GET"])
