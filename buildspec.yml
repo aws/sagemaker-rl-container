@@ -95,14 +95,12 @@ phases:
 
       # run cpu integration tests
       - echo "run cpu integration tests"
-      - |
-        if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"; then
-          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_CPU_TAG --framework mxnet --toolkit coach --processor cpu
-          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_CPU_TAG --framework tensorflow  --toolkit coach --processor cpu
-          pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_CPU_TAG --framework tensorflow --toolkit ray --processor cpu
-        else
-          echo "skipping cpu integration tests"
-        fi
+      - mxnet_coach_cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_CPU_TAG --framework mxnet --toolkit coach --processor cpu"
+      - tf_coach_cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_CPU_TAG --framework tensorflow  --toolkit coach --processor cpu"
+      - tf_ray_cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_CPU_TAG --framework tensorflow --toolkit ray --processor cpu"
+      - execute-command-if-has-matching-changes "$mxnet_coach_cmd" "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"
+      - execute-command-if-has-matching-changes "$tf_coach_cmd" "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"
+      - execute-command-if-has-matching-changes "$tf_ray_cmd" "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"
 
       # build gpu images
       - echo "build gpu images"
@@ -124,40 +122,37 @@ phases:
 
       # run gpu integration tests
       - echo "run gpu integration tests"
-      - |
-        if has-matching-changes "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"; then
-          printf "$SETUP_CMDS" > $SETUP_FILE
-          cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit coach --framework mxnet --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_GPU_TAG --processor gpu"
-          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --setup-file $SETUP_FILE --pr-number $PR_NUM
-          cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit coach --framework tensorflow  --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_GPU_TAG --processor gpu"
-          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --pr-number $PR_NUM --skip-setup
-          cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit ray --framework tensorflow --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_GPU_TAG --processor gpu"
-          remote-test --github-repo $GITHUB_REPO --test-cmd "$cmd" --pr-number $PR_NUM --skip-setup
-        else
-          echo "skipping coach gpu integration tests"
-        fi
+      - printf "$SETUP_CMDS" > $SETUP_FILE
+      - cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit coach --framework mxnet --docker-base-name $PREPROD_IMAGE --tag $COACH_MXNET_GPU_TAG --processor gpu"
+      - mxnet_coach_cmd="remote-test --github-repo $GITHUB_REPO --test-cmd \"$cmd\" --setup-file $SETUP_FILE --pr-number $PR_NUM"
+      - execute-command-if-has-matching-changes "$mxnet_coach_cmd" "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"
+
+      - cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit coach --framework tensorflow  --docker-base-name $PREPROD_IMAGE --tag $COACH_TF_GPU_TAG --processor gpu"
+      - tf_coach_cmd="remote-test --github-repo $GITHUB_REPO --test-cmd \"$cmd\" --pr-number $PR_NUM --skip-setup"
+      - execute-command-if-has-matching-changes "$tf_coach_cmd" "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"
+
+      - cmd="pytest test/integration/local --region $AWS_DEFAULT_REGION --toolkit ray --framework tensorflow --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_GPU_TAG --processor gpu"
+      - tf_ray_cmd="remote-test --github-repo $GITHUB_REPO --test-cmd \"$cmd\" --pr-number $PR_NUM --skip-setup"
+      - execute-command-if-has-matching-changes "$tf_ray_cmd" "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"
 
       # run cpu sagemaker tests
       - echo "run cpu sagemaker tests"
-      - |
-        if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "ray/*" "buildspec.yml"; then
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_MXNET_CPU_TAG --framework mxnet --toolkit coach --instance-type $CPU_INSTANCE_TYPE
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_TF_CPU_TAG --framework tensorflow --toolkit coach --instance-type $CPU_INSTANCE_TYPE
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $RAY_TF_CPU_TAG --framework tensorflow --toolkit ray --instance-type $CPU_INSTANCE_TYPE
-        else
-          echo "skipping cpu sagemaker tests"
-        fi
+      - mxnet_coach_cmd="pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_MXNET_CPU_TAG --framework mxnet --toolkit coach --instance-type $CPU_INSTANCE_TYPE"
+      - tf_coach_cmd="pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_TF_CPU_TAG --framework tensorflow --toolkit coach --instance-type $CPU_INSTANCE_TYPE"
+      - tf_ray_cmd="pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $RAY_TF_CPU_TAG --framework tensorflow --toolkit ray --instance-type $CPU_INSTANCE_TYPE"
+      - execute-command-if-has-matching-changes "$mxnet_coach_cmd" "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"
+      - execute-command-if-has-matching-changes "$tf_coach_cmd" "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"
+      - execute-command-if-has-matching-changes "$tf_ray_cmd" "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"
 
       # run gpu sagemaker tests
       - echo "run gpu sagemaker tests"
-      - |
-        if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "ray/*" "buildspec.yml"; then
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_MXNET_GPU_TAG --framework mxnet --toolkit coach --instance-type $GPU_INSTANCE_TYPE
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_TF_GPU_TAG --framework tensorflow --toolkit coach --instance-type $GPU_INSTANCE_TYPE
-          pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $RAY_TF_GPU_TAG --framework tensorflow --toolkit ray --instance-type $GPU_INSTANCE_TYPE
-        else
-          echo "skipping gpu sagemaker tests"
-        fi
+      - mxnet_coach_cmd="pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_MXNET_GPU_TAG --framework mxnet --toolkit coach --instance-type $GPU_INSTANCE_TYPE"
+      - tf_coach_cmd="pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $COACH_TF_GPU_TAG --framework tensorflow --toolkit coach --instance-type $GPU_INSTANCE_TYPE"
+      - tf_ray_cmd="pytest test/integration/sagemaker --region $AWS_DEFAULT_REGION --docker-base-name $ECR_REPO --aws-id $ACCOUNT --tag $RAY_TF_GPU_TAG --framework tensorflow --toolkit ray --instance-type $GPU_INSTANCE_TYPE"
+      - execute-command-if-has-matching-changes "$mxnet_coach_cmd" "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"
+      - execute-command-if-has-matching-changes "$tf_coach_cmd" "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"
+      - execute-command-if-has-matching-changes "$tf_ray_cmd" "test/" "tests/" "src/*.py" "coach/*" "ray/*" "buildspec.yml"
+
     finally:
       # shut down remote gpu instance
       - cleanup-gpu-instances
