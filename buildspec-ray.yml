@@ -90,20 +90,20 @@ phases:
         docker push $PREPROD_IMAGE:$RAY_TF_CPU_TAG_BUILD_ID
 
       # # run cpu integration tests for ray preprod cpu images
-      # - echo "run local cpu integration tests for ray preprod cpu images"
-      # - |
-      #   if has-matching-changes "test/" "tests/" "src/*.py" "ray/*" "buildspec-ray.yml"; then
-      #     pytest test/integration/local \
-      #             -k "test_ray" \
-      #             --region $AWS_DEFAULT_REGION \
-      #             --docker-base-name $PREPROD_IMAGE \
-      #             --tag $RAY_TF_CPU_TAG_BUILD_ID \
-      #             --framework tensorflow  \
-      #             --toolkit ray \
-      #             --processor cpu
-      #   else
-      #     echo "skipping local cpu integration tests"
-      #   fi
+      - echo "run local cpu integration tests for ray preprod cpu images"
+      - |
+        if has-matching-changes "test/" "tests/" "src/*.py" "ray/*" "buildspec-ray.yml"; then
+          pytest test/integration/local \
+                  -k "test_ray" \
+                  --region $AWS_DEFAULT_REGION \
+                  --docker-base-name $PREPROD_IMAGE \
+                  --tag $RAY_TF_CPU_TAG_BUILD_ID \
+                  --framework tensorflow  \
+                  --toolkit ray \
+                  --processor cpu
+        else
+          echo "skipping local cpu integration tests"
+        fi
 
       # build ray preprod gpu images
       - echo "build ray preprod gpu images"
@@ -141,21 +141,21 @@ phases:
       #   fi
 
       # # run cpu sagemaker tests
-      # - echo "run cpu sagemaker tests for ray preprod cpu images"
-      # - |
-      #   if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "buildspec-ray.yml"; then
-      #     pytest test/integration/sagemaker \
-      #             -k "test_ray" \
-      #             --region $AWS_DEFAULT_REGION \
-      #             --docker-base-name $PREPROD_ECR_REPO \
-      #             --aws-id $ACCOUNT \
-      #             --tag $RAY_TF_CPU_TAG_BUILD_ID \
-      #             --framework tensorflow \
-      #             --toolkit ray \
-      #             --instance-type $CPU_INSTANCE_TYPE
-      #   else
-      #     echo "skipping cpu sagemaker tests"
-      #   fi
+      - echo "run cpu sagemaker tests for ray preprod cpu images"
+      - |
+        if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "buildspec-ray.yml"; then
+          pytest test/integration/sagemaker \
+                  -k "test_ray" \
+                  --region $AWS_DEFAULT_REGION \
+                  --docker-base-name $PREPROD_ECR_REPO \
+                  --aws-id $ACCOUNT \
+                  --tag $RAY_TF_CPU_TAG_BUILD_ID \
+                  --framework tensorflow \
+                  --toolkit ray \
+                  --instance-type $CPU_INSTANCE_TYPE
+        else
+          echo "skipping cpu sagemaker tests"
+        fi
 
       # run gpu sagemaker tests
       # - echo "run gpu sagemaker tests"
