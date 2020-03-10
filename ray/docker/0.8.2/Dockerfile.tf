@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         jq \
         ffmpeg \
+        rsync \
         libjpeg-dev \
         libxrender1 \
         python3.6-dev \
@@ -22,6 +23,8 @@ RUN pip install --upgrade pip
 RUN pip install --no-cache-dir \
     Cython==0.29.7 \
     tabulate \
+    tensorboardX \
+    gputil \
     gym==0.12.1 \
     lz4 \
     opencv-python-headless==4.1.0.25 \
@@ -29,8 +32,12 @@ RUN pip install --no-cache-dir \
     pyyaml \
     redis==3.3.2 \
     ray==0.8.2 \
+    ray[tune]==0.8.2 \
     ray[rllib]==0.8.2 \
-    scipy
+    scipy \
+    psutil \
+    setproctitle \
+    tensorflow-probability
 
 # https://click.palletsprojects.com/en/7.x/python3/
 ENV LC_ALL=C.UTF-8
