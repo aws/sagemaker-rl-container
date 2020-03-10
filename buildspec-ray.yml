@@ -58,13 +58,13 @@ phases:
       # # pull cpu base images
       - echo "pull cpu base images"
       - |
-        RAY_TF_CPU_BASE_TAG="$RAY_TF_FRAMEWORK_VERSION-cpu-py$PY_VERSION"
+        RAY_TF_CPU_BASE_TAG="$RAY_TF_FRAMEWORK_VERSION-cpu-py$PY_VERSION-ubuntu18.04"
         docker pull $TF_IMAGE:$RAY_TF_CPU_BASE_TAG
 
       # pull gpu base images
       - echo "pull gpu base images"
       - |
-        RAY_TF_GPU_BASE_TAG="$RAY_TF_FRAMEWORK_VERSION-gpu-py$PY_VERSION"
+        RAY_TF_GPU_BASE_TAG="$RAY_TF_FRAMEWORK_VERSION-gpu-py$PY_VERSION-cu101-ubuntu18.04"
         docker pull $TF_IMAGE:$RAY_TF_GPU_BASE_TAG
 
       # # build ray preprod cpu images
@@ -80,6 +80,7 @@ phases:
                      -t $PREPROD_IMAGE:$RAY_TF_CPU_TAG_BUILD_ID \
                      -f ray/docker/$RAY_TF_TOOLKIT_VERSION/Dockerfile.tf \
                      --build-arg processor=cpu \
+                     --build-arg suffix=ubuntu18.04 \
                      --build-arg region=$AWS_DEFAULT_REGION .
 
       # # push ray preprod cpu images to ecr
@@ -117,6 +118,7 @@ phases:
                      -t $PREPROD_IMAGE:$RAY_TF_GPU_TAG_BUILD_ID \
                      -f ray/docker/$RAY_TF_TOOLKIT_VERSION/Dockerfile.tf \
                      --build-arg processor=gpu \
+                     --build-arg suffix=cu101-ubuntu18.04 \
                      --build-arg region=$AWS_DEFAULT_REGION .
 
       # push ray preprod gpu images to ecr
