@@ -93,6 +93,8 @@ TensorFlow Coach Images:
 * 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.11-gpu-py3
 * 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.11.0-gpu-py3
 * 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:coach0.11.1-gpu-py3
+* 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-coach-container:coach-1.0.0-tf-cpu-py3
+* 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-coach-container:coach-1.0.0-tf-gpu-py3
 
 TensorFlow Ray Images:
 
@@ -100,6 +102,8 @@ TensorFlow Ray Images:
 * 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6.5-cpu-py3
 * 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6-gpu-py3
 * 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6.5-gpu-py3
+* 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.2-tf-cpu-py36
+* 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.2-tf-gpu-py36
 
 Vowpal Wabbit Images:
 
