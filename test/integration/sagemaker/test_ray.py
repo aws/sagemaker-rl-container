@@ -21,9 +21,9 @@ from timeout import timeout
 
 
 @pytest.mark.run_ray
-def test_ray_tf(sagemaker_session, ecr_image, instance_type):
+def test_ray(sagemaker_session, ecr_image, instance_type, framework):
     source_dir = os.path.join(RESOURCE_PATH, 'ray_cartpole')
-    cartpole = 'train_ray.py'
+    cartpole = 'train_ray_tf.py' if framework == 'tensorflow' else 'train_ray_torch.py'
 
     estimator = RLEstimator(entry_point=cartpole,
                             source_dir=source_dir,

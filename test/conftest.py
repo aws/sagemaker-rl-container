@@ -37,7 +37,7 @@ SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 def pytest_addoption(parser):
     parser.addoption('--docker-base-name')
     parser.addoption('--docker-image')
-    parser.addoption('--framework', choices=['tensorflow', 'mxnet', 'vw'])
+    parser.addoption('--framework', choices=['tensorflow', 'mxnet', 'vw', 'torch'])
     parser.addoption('--region', default='us-west-2')
     parser.addoption('--role', default='SageMakerContainerBuildIntegrationTests')
     parser.addoption('--toolkit', choices=['coach', 'ray', 'none'])
