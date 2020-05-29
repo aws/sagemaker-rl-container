@@ -104,6 +104,12 @@ TensorFlow Ray Images:
 * 520713654638.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-tensorflow:ray0.6.5-gpu-py3
 * 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.2-tf-cpu-py36
 * 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.2-tf-gpu-py36
+* 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.5-tf-cpu-py36
+* 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.5-tf-gpu-py36
+
+PyTorch Ray Images:
+* 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.5-torch-cpu-py36
+* 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.5-torch-gpu-py36
 
 Vowpal Wabbit Images:
 
