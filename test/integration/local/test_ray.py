@@ -22,9 +22,9 @@ import local_mode_utils
 
 
 @pytest.mark.run_ray
-def test_ray_tf(local_instance_type, sagemaker_local_session, docker_image, tmpdir):
+def test_ray(local_instance_type, sagemaker_local_session, docker_image, tmpdir, framework):
     source_dir = os.path.join(RESOURCE_PATH, 'ray_cartpole')
-    cartpole = 'train_ray.py'
+    cartpole = 'train_ray_tf.py' if framework == 'tensorflow' else 'train_ray_torch.py'
 
     estimator = RLEstimator(entry_point=cartpole,
                             source_dir=source_dir,
@@ -39,3 +39,5 @@ def test_ray_tf(local_instance_type, sagemaker_local_session, docker_image, tmpd
 
     local_mode_utils.assert_output_files_exist(str(tmpdir), 'output', ['success'])
     assert os.path.exists(os.path.join(str(tmpdir), 'model.tar.gz')), 'model file not found'
+
+
