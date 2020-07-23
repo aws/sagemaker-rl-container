@@ -40,6 +40,9 @@ RUN pip install --no-cache-dir \
     dm-tree \
     tensorflow-probability
 
+# https://github.com/aws/sagemaker-rl-container/issues/39
+RUN pip install pyglet==1.3.2
+
 # https://click.palletsprojects.com/en/7.x/python3/
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
