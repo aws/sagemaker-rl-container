@@ -108,6 +108,7 @@ TensorFlow Ray Images:
 * 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.5-tf-gpu-py36
 
 PyTorch Ray Images:
+
 * 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.5-torch-cpu-py36
 * 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.5-torch-gpu-py36
 
