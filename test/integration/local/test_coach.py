@@ -32,10 +32,10 @@ def test_cartpole(docker_image, sagemaker_local_session, processor, tmpdir):
     estimator = RLEstimator(entry_point=cartpole,
                             source_dir=source_dir,
                             role='SageMakerRole',
-                            train_instance_count=1,
-                            train_instance_type=instance_type,
+                            instance_count=1,
+                            instance_type=instance_type,
                             sagemaker_session=sagemaker_local_session,
-                            image_name=docker_image,
+                            image_uri=docker_image,
                             output_path='file://{}'.format(tmpdir),
                             dependencies=dependencies,
                             hyperparameters={
