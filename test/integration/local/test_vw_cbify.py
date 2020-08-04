@@ -27,12 +27,12 @@ def test_vw_cb_explore(local_instance_type, sagemaker_local_session, docker_imag
     estimator = RLEstimator(entry_point="train_cbify.py",
                             source_dir=source_path,
                             role=role,
-                            train_instance_count=1,
+                            instance_count=1,
+                            instance_type=local_instance_type,
                             hyperparameters={"num_arms": 7},
-                            train_instance_type=local_instance_type,
                             sagemaker_session=sagemaker_local_session,
                             output_path='file://{}'.format(tmpdir),
-                            image_name=docker_image)
+                            image_uri=docker_image)
     estimator.fit(inputs=training_data_supervised)
 
     local_mode_utils.assert_output_files_exist(str(tmpdir), 'output', ['success'])

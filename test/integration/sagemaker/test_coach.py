@@ -29,10 +29,10 @@ def test_coach(sagemaker_session, ecr_image, instance_type):
     estimator = RLEstimator(entry_point=cartpole,
                             source_dir=source_dir,
                             role='SageMakerRole',
-                            train_instance_count=1,
-                            train_instance_type=instance_type,
+                            instance_count=1,
+                            instance_type=instance_type,
                             sagemaker_session=sagemaker_session,
-                            image_name=ecr_image,
+                            image_uri=ecr_image,
                             dependencies=dependencies,
                             hyperparameters={
                                 "save_model": 1,

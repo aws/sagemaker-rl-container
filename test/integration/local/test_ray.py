@@ -29,11 +29,11 @@ def test_ray(local_instance_type, sagemaker_local_session, docker_image, tmpdir,
     estimator = RLEstimator(entry_point=cartpole,
                             source_dir=source_dir,
                             role='SageMakerRole',
-                            train_instance_count=1,
-                            train_instance_type=local_instance_type,
+                            instance_count=1,
+                            instance_type=local_instance_type,
                             sagemaker_session=sagemaker_local_session,
                             output_path='file://{}'.format(tmpdir),
-                            image_name=docker_image)
+                            image_uri=docker_image)
 
     estimator.fit()
 
