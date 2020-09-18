@@ -24,7 +24,7 @@ RUN cd /tmp && \
 
 RUN pip install --no-cache-dir \
     PyOpenGL==3.1.0 \
-    gym==0.10.5 \
+    gym[atari]==0.10.5 \
     redis==2.10.6 \
     rl-coach-slim==0.11.0 && \
     pip install --no-cache-dir --upgrade sagemaker-containers
