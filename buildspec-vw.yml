@@ -35,6 +35,9 @@ phases:
       # install dependencies
       - echo "installing dependencies"
       - pip3 install -U pytest==4.4.2 pytest-cov pytest-xdist mock tox flake8 sagemaker
+      # Update awscli for compatibility with the latest botocore version that breaks it
+      # https://github.com/boto/boto3/issues/2596
+      - pip3 install --upgrade awscli
 
       - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION --registry-ids $ACCOUNT)
       - BUILD_ID="$(echo $CODEBUILD_BUILD_ID | sed -e 's/:/-/g' | tr '[:upper:]' '[:lower:]')"

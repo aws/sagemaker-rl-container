@@ -36,6 +36,9 @@ phases:
       # install
       - echo "install"
       - pip3 install -U -e .
+      # Update awscli for compatibility with the latest botocore version that breaks it
+      # https://github.com/boto/boto3/issues/2596
+      - pip3 install --upgrade awscli
 
       # launch remote gpu instance
       - echo "launch remote gpu instance"
