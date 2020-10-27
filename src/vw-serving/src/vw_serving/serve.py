@@ -11,7 +11,7 @@ import datetime
 import random
 
 import numpy as np
-from gunicorn.six import iteritems
+from six import iteritems
 from pkg_resources import iter_entry_points as iep
 import flask
 import gunicorn.app.base
