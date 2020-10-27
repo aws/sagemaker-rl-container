@@ -35,7 +35,7 @@ def test_vw_serving(local_instance_type, sagemaker_local_session, docker_image, 
                     "MODEL_METADATA_POLLING": "false"}
     
     model = sagemaker.model.Model(
-        image=docker_image,
+        image_uri=docker_image,
         role=role,
         env=environ_vars,
         name="test_env",
@@ -43,8 +43,8 @@ def test_vw_serving(local_instance_type, sagemaker_local_session, docker_image, 
         )
     model.deploy(initial_instance_count=1, instance_type=local_instance_type)
 
-    predictor = sagemaker.predictor.RealTimePredictor(
-        model.endpoint_name,
+    predictor = sagemaker.predictor.Predictor(
+        endpoint_name=model.endpoint_name,
         serializer=sagemaker.predictor.json_serializer,
         deserializer=sagemaker.predictor.json_deserializer,
         sagemaker_session=model.sagemaker_session)
