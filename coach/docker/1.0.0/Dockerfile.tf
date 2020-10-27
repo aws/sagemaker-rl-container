@@ -23,6 +23,10 @@ RUN cd /tmp && \
     make && \
     make install
 
+# Update awscli for compatibility with the latest botocore version that breaks it
+# https://github.com/boto/boto3/issues/2596
+RUN pip install --upgrade awscli
+
 RUN pip install --no-cache-dir \
     PyOpenGL==3.1.0 \
     pyglet==1.3.2 \

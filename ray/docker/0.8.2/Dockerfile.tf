@@ -18,7 +18,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install --upgrade pip
+# Update awscli for compatibility with the latest botocore version that breaks it
+# https://github.com/boto/boto3/issues/2596
+RUN pip install --upgrade pip awscli
 
 RUN pip install --no-cache-dir \
     Cython==0.29.7 \
