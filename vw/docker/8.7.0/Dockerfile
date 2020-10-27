@@ -44,6 +44,10 @@ RUN \
   make && \
   make install
 
+# Update awscli for compatibility with the latest botocore version that breaks it
+# https://github.com/boto/boto3/issues/2596
+RUN pip install --upgrade awscli
+
 RUN pip install ipython \
                 sagemaker-containers==2.5.1 \
                 redis==3.2.1 \
