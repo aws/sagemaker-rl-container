@@ -37,7 +37,8 @@ RUN pip install --no-cache-dir \
     scipy \
     psutil \
     setproctitle \
-    tensorflow-probability
+    tensorflow-probability \
+    tf_slim
 
 # https://github.com/aws/sagemaker-rl-container/issues/39
 RUN pip install pyglet==1.3.2
