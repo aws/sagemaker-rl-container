@@ -40,7 +40,7 @@ RUN pip install --no-cache-dir \
     dm-tree \
     tensorflow-probability \
     tf_slim \
-    sagemaker-tensorflow-training==20.1.3
+    sagemaker-tensorflow-training==20.1.4
 
 # https://github.com/ray-project/ray/issues/11773
 RUN pip install dataclasses
