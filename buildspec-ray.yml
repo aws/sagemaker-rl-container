@@ -2,7 +2,7 @@ version: 0.2
 
 env:
   variables:
-    RAY_TOOLKIT_VERSION: '1.0.0'
+    RAY_TOOLKIT_VERSION: '0.8.5'
     RAY_TF_FRAMEWORK_VERSION: '2.1.0'
     RAY_TORCH_FRAMEWORK_VERSION: '1.5.0'
     CPU_INSTANCE_TYPE: 'ml.c4.xlarge'
