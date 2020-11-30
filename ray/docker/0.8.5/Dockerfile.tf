@@ -39,7 +39,8 @@ RUN pip install --no-cache-dir \
     setproctitle \
     dm-tree \
     tensorflow-probability \
-    tf_slim
+    tf_slim \
+    sagemaker-tensorflow-training==20.1.4
 
 # https://github.com/aws/sagemaker-rl-container/issues/39
 RUN pip install pyglet==1.3.2
