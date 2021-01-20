@@ -2,12 +2,13 @@ version: 0.2
 
 env:
   variables:
-    RAY_TOOLKIT_VERSION: '1.0.0'
-    RAY_TF_FRAMEWORK_VERSION: '2.1.0'
-    RAY_TORCH_FRAMEWORK_VERSION: '1.5.0'
-    CPU_INSTANCE_TYPE: 'ml.c4.xlarge'
+    RAY_TOOLKIT_VERSION: '1.1.0'
+    RAY_TF_FRAMEWORK_VERSION: '2.3.1'
+    RAY_TORCH_FRAMEWORK_VERSION: '1.6.0'
+    CPU_INSTANCE_TYPE: 'ml.c5.xlarge'
     GPU_INSTANCE_TYPE: 'ml.p2.xlarge'
-    PY_VERSION: '36'
+    TF_PY_VERSION: '37'
+    TORCH_PY_VERSION: '36'
     BASE_ECR_REPO: 'sagemaker-rl-ray-container'    # previous images repo for layer cache, same name as pro image repo
     PREPROD_ECR_REPO: 'sagemaker-test'
     PROD_ECR_REPO: 'sagemaker-rl-ray-container'
@@ -39,7 +40,7 @@ phases:
       - pip3 install -U -e .
       # Update awscli for compatibility with the latest botocore version that breaks it
       # https://github.com/boto/boto3/issues/2596
-      - pip3 install --upgrade awscli
+      - pip3 install --upgrade awscli pip urllib3 chardet boto3 requests pandas
 
       # launch remote gpu instance only in region us-west-2
       - |
@@ -62,32 +63,32 @@ phases:
       # pull tf cpu base images
       - echo "pull tf cpu base images"
       - |
-        RAY_TF_CPU_BASE_TAG="$RAY_TF_FRAMEWORK_VERSION-cpu-py$PY_VERSION-ubuntu18.04"
+        RAY_TF_CPU_BASE_TAG="$RAY_TF_FRAMEWORK_VERSION-cpu-py$TF_PY_VERSION-ubuntu18.04"
         docker pull $TF_IMAGE:$RAY_TF_CPU_BASE_TAG
 
       # pull torch cpu base images
       - echo "pull torch cpu base images"
       - |
-        RAY_TORCH_CPU_BASE_TAG="$RAY_TORCH_FRAMEWORK_VERSION-cpu-py$PY_VERSION-ubuntu16.04"
+        RAY_TORCH_CPU_BASE_TAG="$RAY_TORCH_FRAMEWORK_VERSION-cpu-py$TORCH_PY_VERSION-ubuntu16.04"
         docker pull $TORCH_IMAGE:$RAY_TORCH_CPU_BASE_TAG
 
       # pull tf gpu base images
       - echo "pull tf pu base images"
       - |
-        RAY_TF_GPU_BASE_TAG="$RAY_TF_FRAMEWORK_VERSION-gpu-py$PY_VERSION-cu101-ubuntu18.04"
+        RAY_TF_GPU_BASE_TAG="$RAY_TF_FRAMEWORK_VERSION-gpu-py$TF_PY_VERSION-cu110-ubuntu18.04"
         docker pull $TF_IMAGE:$RAY_TF_GPU_BASE_TAG
 
       # pull torch gpu base images
       - echo "pull torch gpu base images"
       - |
-        RAY_TORCH_GPU_BASE_TAG="$RAY_TORCH_FRAMEWORK_VERSION-gpu-py$PY_VERSION-cu101-ubuntu16.04"
+        RAY_TORCH_GPU_BASE_TAG="$RAY_TORCH_FRAMEWORK_VERSION-gpu-py$TORCH_PY_VERSION-cu110-ubuntu16.04"
         docker pull $TORCH_IMAGE:$RAY_TORCH_GPU_BASE_TAG
 
       # build ray tf preprod cpu images
       - echo "build ray tf preprod cpu images"
       - |
-        RAY_TF_CPU_TAG="ray-$RAY_TOOLKIT_VERSION-tf-cpu-py$PY_VERSION"
-        RAY_TF_CPU_TAG_BUILD_ID="ray-$RAY_TOOLKIT_VERSION-tf-cpu-py$PY_VERSION-$BUILD_ID"
+        RAY_TF_CPU_TAG="ray-$RAY_TOOLKIT_VERSION-tf-cpu-py$TF_PY_VERSION"
+        RAY_TF_CPU_TAG_BUILD_ID="ray-$RAY_TOOLKIT_VERSION-tf-cpu-py$TF_PY_VERSION-$BUILD_ID"
 
         echo "pulling previous_image $BASE_IMAGE:$RAY_TF_CPU_TAG for layer cache..."
         $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
@@ -124,8 +125,8 @@ phases:
       # build ray torch preprod cpu images
       - echo "build ray torch preprod cpu images"
       - |
-        RAY_TORCH_CPU_TAG="ray-$RAY_TOOLKIT_VERSION-torch-cpu-py$PY_VERSION"
-        RAY_TORCH_CPU_TAG_BUILD_ID="ray-$RAY_TOOLKIT_VERSION-torch-cpu-py$PY_VERSION-$BUILD_ID"
+        RAY_TORCH_CPU_TAG="ray-$RAY_TOOLKIT_VERSION-torch-cpu-py$TORCH_PY_VERSION"
+        RAY_TORCH_CPU_TAG_BUILD_ID="ray-$RAY_TOOLKIT_VERSION-torch-cpu-py$TORCH_PY_VERSION-$BUILD_ID"
 
         echo "pulling previous_image $BASE_IMAGE:$RAY_TORCH_CPU_TAG for layer cache..."
         $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
@@ -162,8 +163,8 @@ phases:
       # build ray tf preprod gpu images
       - echo "build ray tf preprod gpu images"
       - |
-        RAY_TF_GPU_TAG="ray-$RAY_TOOLKIT_VERSION-tf-gpu-py$PY_VERSION"
-        RAY_TF_GPU_TAG_BUILD_ID="ray-$RAY_TOOLKIT_VERSION-tf-gpu-py$PY_VERSION-$BUILD_ID"
+        RAY_TF_GPU_TAG="ray-$RAY_TOOLKIT_VERSION-tf-gpu-py$TF_PY_VERSION"
+        RAY_TF_GPU_TAG_BUILD_ID="ray-$RAY_TOOLKIT_VERSION-tf-gpu-py$TF_PY_VERSION-$BUILD_ID"
 
         echo "pulling previous_image $BASE_IMAGE:$RAY_TF_GPU_TAG for layer cache..."
         $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
@@ -172,7 +173,7 @@ phases:
                      -t $PREPROD_IMAGE:$RAY_TF_GPU_TAG_BUILD_ID \
                      -f ray/docker/$RAY_TOOLKIT_VERSION/Dockerfile.tf \
                      --build-arg processor=gpu \
-                     --build-arg suffix=cu101-ubuntu18.04 \
+                     --build-arg suffix=cu110-ubuntu18.04 \
                      --build-arg region=$AWS_DEFAULT_REGION .
 
       # push ray tf preprod gpu images to ecr
@@ -197,8 +198,8 @@ phases:
       # build ray torch preprod gpu images
       - echo "build ray torch preprod gpu images"
       - |
-        RAY_TORCH_GPU_TAG="ray-$RAY_TOOLKIT_VERSION-torch-gpu-py$PY_VERSION"
-        RAY_TORCH_GPU_TAG_BUILD_ID="ray-$RAY_TOOLKIT_VERSION-torch-gpu-py$PY_VERSION-$BUILD_ID"
+        RAY_TORCH_GPU_TAG="ray-$RAY_TOOLKIT_VERSION-torch-gpu-py$TORCH_PY_VERSION"
+        RAY_TORCH_GPU_TAG_BUILD_ID="ray-$RAY_TOOLKIT_VERSION-torch-gpu-py$TORCH_PY_VERSION-$BUILD_ID"
 
         echo "pulling previous_image $BASE_IMAGE:$RAY_TORCH_GPU_TAG for layer cache..."
         $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
@@ -207,7 +208,7 @@ phases:
                      -t $PREPROD_IMAGE:$RAY_TORCH_GPU_TAG_BUILD_ID \
                      -f ray/docker/$RAY_TOOLKIT_VERSION/Dockerfile.torch \
                      --build-arg processor=gpu \
-                     --build-arg suffix=cu101-ubuntu16.04 \
+                     --build-arg suffix=cu110-ubuntu16.04 \
                      --build-arg region=$AWS_DEFAULT_REGION .
 
       # push ray torch preprod gpu images to ecr
