@@ -333,8 +333,8 @@ phases:
         fi
 
       # remove ecr image
-      - |
-        aws ecr batch-delete-image --repository-name $PREPROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TF_CPU_TAG_BUILD_ID
-        aws ecr batch-delete-image --repository-name $PREPROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TORCH_CPU_TAG_BUILD_ID
-        aws ecr batch-delete-image --repository-name $PREPROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TF_GPU_TAG_BUILD_ID
-        aws ecr batch-delete-image --repository-name $PREPROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TORCH_GPU_TAG_BUILD_ID
+#      - |
+#        aws ecr batch-delete-image --repository-name $PREPROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TF_CPU_TAG_BUILD_ID
+#        aws ecr batch-delete-image --repository-name $PREPROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TORCH_CPU_TAG_BUILD_ID
+#        aws ecr batch-delete-image --repository-name $PREPROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TF_GPU_TAG_BUILD_ID
+#        aws ecr batch-delete-image --repository-name $PREPROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TORCH_GPU_TAG_BUILD_ID
