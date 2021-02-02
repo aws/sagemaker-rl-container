@@ -2,7 +2,7 @@ ARG processor
 ARG region
 ARG suffix
 
-FROM 763104351884.dkr.ecr.$region.amazonaws.com/tensorflow-training:2.3.1-$processor-py37-$suffix
+FROM 763104351884.dkr.ecr.$region.amazonaws.com/tensorflow-training:2.1.0-$processor-py36-$suffix
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
