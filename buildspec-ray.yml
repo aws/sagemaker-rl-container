@@ -72,7 +72,7 @@ phases:
         docker pull $TORCH_IMAGE:$RAY_TORCH_CPU_BASE_TAG
 
       # pull tf gpu base images
-      - echo "pull tf pu base images"
+      - echo "pull tf gpu base images"
       - |
         RAY_TF_GPU_BASE_TAG="$RAY_TF_FRAMEWORK_VERSION-gpu-py$PY_VERSION-cu101-ubuntu18.04"
         docker pull $TF_IMAGE:$RAY_TF_GPU_BASE_TAG
