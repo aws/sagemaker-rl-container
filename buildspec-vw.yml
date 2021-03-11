@@ -96,7 +96,6 @@ phases:
 
     finally:
 
-      # remove preprod ecr image
-      - |
-        aws ecr batch-delete-image --repository-name $PREPROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$NEW_IMAGE_TAG
-
+#      # remove preprod ecr image
+#      - |
+#        aws ecr batch-delete-image --repository-name $PREPROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$NEW_IMAGE_TAG
