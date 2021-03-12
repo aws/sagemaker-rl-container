@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libav-tools \
         libjpeg-dev \
         libxrender1 \
+        python3.5 \
+        python3.6 \
         python3.6-dev \
         python3-opengl \
         wget \
@@ -28,6 +30,7 @@ RUN pip install --no-cache-dir \
     pyglet==1.3.2 \
     gym==0.12.5 \
     redis==2.10.6 \
+    minio==4.0.5 \
     rl-coach-slim==1.0.0 && \
     pip install --no-cache-dir --upgrade sagemaker-containers && \
     pip install --upgrade numpy

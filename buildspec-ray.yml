@@ -301,7 +301,7 @@ phases:
           echo "skipping gpu sagemaker tests"
         fi
 
-      # publish cpu and gpu image to prod ecr repo if this is release build 
+      # publish cpu and gpu image to prod ecr repo if this is release build
       - |
         if is-release-build; then
           $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
