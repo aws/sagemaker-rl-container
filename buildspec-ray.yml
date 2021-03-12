@@ -263,8 +263,8 @@ phases:
           echo "skipping cpu sagemaker tests"
         fi
 
-      # run gpu sagemaker tests for ray tf preprod cpu images
-      - echo "run gpu sagemaker tests for ray tf preprod cpu images"
+      # run gpu sagemaker tests for ray tf preprod gpu images
+      - echo "run gpu sagemaker tests for ray tf preprod gpu images"
       - |
         if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "buildspec-ray.yml"; then
           if [ "$AWS_DEFAULT_REGION" = "us-west-2" ]; then
@@ -282,8 +282,8 @@ phases:
           echo "skipping gpu sagemaker tests"
         fi
 
-      # run gpu sagemaker tests for ray torch preprod cpu images
-      - echo "run gpu sagemaker tests for ray torch preprod cpu images"
+      # run gpu sagemaker tests for ray torch preprod gpu images
+      - echo "run gpu sagemaker tests for ray torch preprod gpu images"
       - |
         if has-matching-changes "test/" "tests/" "src/*.py" "docker/*" "buildspec-ray.yml"; then
           if [ "$AWS_DEFAULT_REGION" = "us-west-2" ]; then
