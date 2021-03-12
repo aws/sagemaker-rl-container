@@ -305,19 +305,15 @@ phases:
       - |
         if is-release-build; then
           $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
-          aws ecr batch-delete-image --repository-name $PROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TF_CPU_TAG
           docker tag $PREPROD_IMAGE:$RAY_TF_CPU_TAG_BUILD_ID $PROD_IMAGE:$RAY_TF_CPU_TAG
           docker push $PROD_IMAGE:$RAY_TF_CPU_TAG
 
-          aws ecr batch-delete-image --repository-name $PROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TF_CPU_TAG
           docker tag $PREPROD_IMAGE:$RAY_TORCH_CPU_TAG_BUILD_ID $PROD_IMAGE:$RAY_TORCH_CPU_TAG
           docker push $PROD_IMAGE:$RAY_TORCH_CPU_TAG
 
-          aws ecr batch-delete-image --repository-name $PROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TF_CPU_TAG
           docker tag $PREPROD_IMAGE:$RAY_TF_GPU_TAG_BUILD_ID $PROD_IMAGE:$RAY_TF_GPU_TAG
           docker push $PROD_IMAGE:$RAY_TF_GPU_TAG
 
-          aws ecr batch-delete-image --repository-name $PROD_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TF_CPU_TAG
           docker tag $PREPROD_IMAGE:$RAY_TORCH_GPU_TAG_BUILD_ID $PROD_IMAGE:$RAY_TORCH_GPU_TAG
           docker push $PROD_IMAGE:$RAY_TORCH_GPU_TAG
         else
