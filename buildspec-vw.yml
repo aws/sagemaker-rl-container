@@ -84,8 +84,6 @@ phases:
         if is-release-build; then
           echo "publishing new image to production repo"
           PROD_ECR_IMAGE_WITH_TAG=$PROD_IMAGE_ECR_REPO:$VW_BASE_TAG
-
-          aws ecr batch-delete-image --repository-name $PROD_IMAGE_ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$VW_BASE_TAG
           ./scripts/publish.sh \
             --local-image-tag $NEW_IMAGE_TAG \
             --new-ecr-image-tag $PROD_ECR_IMAGE_WITH_TAG
