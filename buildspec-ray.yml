@@ -188,7 +188,7 @@ phases:
           if [ "$AWS_DEFAULT_REGION" = "us-west-2" ]; then
             printf "$SETUP_CMDS" > $SETUP_FILE
             cmd="pytest test/integration/local -k 'test_ray' --region $AWS_DEFAULT_REGION --toolkit ray --framework tensorflow --docker-base-name $PREPROD_IMAGE --tag $RAY_TF_GPU_TAG_BUILD_ID --processor gpu"
-            remote-test --github-user yunzhe-tao --github-repo $GITHUB_REPO --branch ray-0.8.5-test --test-cmd "$cmd" --setup-file $SETUP_FILE
+            remote-test --github-repo $GITHUB_REPO --branch master --test-cmd "$cmd" --setup-file $SETUP_FILE
           fi
         else
           echo "skipping local gpu integration tests"
@@ -223,7 +223,7 @@ phases:
           if [ "$AWS_DEFAULT_REGION" = "us-west-2" ]; then
             printf "$SETUP_CMDS" > $SETUP_FILE
             cmd="pytest test/integration/local -k 'test_ray' --region $AWS_DEFAULT_REGION --toolkit ray --framework torch --docker-base-name $PREPROD_IMAGE --tag $RAY_TORCH_GPU_TAG_BUILD_ID --processor gpu"
-            remote-test --github-user yunzhe-tao --github-repo $GITHUB_REPO --branch ray-0.8.5-test --test-cmd "$cmd" --setup-file $SETUP_FILE --skip-setup
+            remote-test --github-repo $GITHUB_REPO --branch master --test-cmd "$cmd" --setup-file $SETUP_FILE --skip-setup
           fi
         else
           echo "skipping local gpu integration tests"
