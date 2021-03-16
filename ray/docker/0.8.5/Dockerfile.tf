@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         rsync \
         libjpeg-dev \
         libxrender1 \
+        python3.6.13 \
         python3.6-dev \
         python3-opengl \
         wget \
@@ -44,8 +45,6 @@ RUN pip install --no-cache-dir \
 
 # https://github.com/aws/sagemaker-rl-container/issues/39
 RUN pip install pyglet==1.3.2
-
-RUN conda install -y python=3.6.13
 
 # https://click.palletsprojects.com/en/7.x/python3/
 ENV LC_ALL=C.UTF-8
