@@ -66,6 +66,7 @@ Framework
 Framework refers to a Deep Learning framework/library that a toolkit may need in order to train an algorithm. We use Sagemaker created framework images/prebuilt Amazon SageMaker Docker images as base images in a Toolkit's Dockerfile (whenever required). Currently we are using these two frameworks:
 
 * TensorFlow (used for Ray and Coach)
+* PyTorch (used for Ray)
 * MXNet (used for Coach)
 
 Note: VW doesn't require a framework
@@ -106,11 +107,15 @@ TensorFlow Ray Images:
 * 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.2-tf-gpu-py36
 * 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.5-tf-cpu-py36
 * 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.5-tf-gpu-py36
+* 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-1.6.0-tf-cpu-py37
+* 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-1.6.0-tf-gpu-py37
 
 PyTorch Ray Images:
 
 * 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.5-torch-cpu-py36
 * 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-0.8.5-torch-gpu-py36
+* 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-1.6.0-torch-cpu-py36
+* 462105765813.dkr.ecr.<region>.amazonaws.com/sagemaker-rl-ray-container:ray-1.6.0-torch-gpu-py36
 
 Vowpal Wabbit Images:
 
@@ -121,6 +126,8 @@ Vowpal Wabbit Images:
 
 Building Your Image
 -------------------
+
+**NOTE**: The Amazon SageMaker RL team will provide Dockerfile for the newer Ray images (Ray >= 1.6.0) soon.
 
 `Amazon SageMaker <https://aws.amazon.com/documentation/sagemaker/>`__
 utilizes Docker containers to run all training jobs and inference endpoints.
