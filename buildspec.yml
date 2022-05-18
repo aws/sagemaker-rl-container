@@ -17,20 +17,15 @@ env:
     SETUP_FILE: 'setup_cmds.sh'
     SETUP_CMDS: '#!/bin/bash\npip install --upgrade pip\npip install -U -e .'
 
-
 phases:
   pre_build:
     commands:
       - start-dockerd
-      - |
-        ACCOUNT=$(aws sts get-caller-identity --query 'Account' --output text)
-        PREPROD_IMAGE="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO"
-        PR_NUM=$(echo $CODEBUILD_SOURCE_VERSION | grep -o '[0-9]\+')
-      # keep ssh connection alive when communicating with remote ec2 server during integ test
-      # largest connection idle time allowed: 10 seconds * 300 attempts = 50 minutes
-      - |
-        echo '  ServerAliveInterval 10' >> ~/.ssh/config
-        echo '  ServerAliveCountMax 300' >> ~/.ssh/config
+      - ACCOUNT=$(aws sts get-caller-identity --query 'Account' --output text)
+      - PREPROD_IMAGE="$ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO"
+      - PR_NUM=$(echo $CODEBUILD_SOURCE_VERSION | grep -o '[0-9]\+')
+      - echo 'Pull request number:' $PR_NUM '. No value means this build is not from pull request.'
+
   build:
     commands:
       # install
@@ -42,25 +37,23 @@ phases:
 
       # launch remote gpu instance
       - echo "launch remote gpu instance"
-      - |
-        prefix='ml.'
-        instance_type=${GPU_INSTANCE_TYPE#"$prefix"}
+      - prefix='ml.'
+      - instance_type=${GPU_INSTANCE_TYPE#"$prefix"}
       - create-key-pair
       - launch-ec2-instance --instance-type $instance_type --ami-name dlami-ubuntu
 
       - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION --registry-ids $PROD_ACCOUNT)
-      - |
-        MXNET_IMAGE="$PROD_ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/sagemaker-mxnet"
-        TF_IMAGE="$PROD_ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/sagemaker-tensorflow-scriptmode"
-        BUILD_ID="$(echo $CODEBUILD_BUILD_ID | sed -e 's/:/-/g')"
+      - MXNET_IMAGE="$PROD_ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/sagemaker-mxnet"
+      - TF_IMAGE="$PROD_ACCOUNT.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/sagemaker-tensorflow-scriptmode"
+      - BUILD_ID="$(echo $CODEBUILD_BUILD_ID | sed -e 's/:/-/g')"
 
       # pull cpu base images
       - echo "pull cpu base images"
+      - COACH_MXNET_CPU_BASE_TAG="$COACH_MXNET_FRAMEWORK_VERSION-cpu-py$PY_VERSION"
+      - docker pull $MXNET_IMAGE:$COACH_MXNET_CPU_BASE_TAG
+      - COACH_TF_CPU_BASE_TAG="$COACH_TF_FRAMEWORK_VERSION-cpu-py$PY_VERSION"
+      - docker pull $TF_IMAGE:$COACH_TF_CPU_BASE_TAG
       - |
-        COACH_MXNET_CPU_BASE_TAG="$COACH_MXNET_FRAMEWORK_VERSION-cpu-py$PY_VERSION"
-        docker pull $MXNET_IMAGE:$COACH_MXNET_CPU_BASE_TAG
-        COACH_TF_CPU_BASE_TAG="$COACH_TF_FRAMEWORK_VERSION-cpu-py$PY_VERSION"
-        docker pull $TF_IMAGE:$COACH_TF_CPU_BASE_TAG
         if [ "$RAY_TF_FRAMEWORK_VERSION" != "$COACH_TF_FRAMEWORK_VERSION" ]; then
           RAY_TF_CPU_BASE_TAG="$RAY_TF_FRAMEWORK_VERSION-cpu-py$PY_VERSION"
           docker pull $TF_IMAGE:$RAY_TF_CPU_BASE_TAG
@@ -68,11 +61,11 @@ phases:
 
       # pull gpu base images
       - echo "pull gpu base images"
+      - COACH_MXNET_GPU_BASE_TAG="$COACH_MXNET_FRAMEWORK_VERSION-gpu-py$PY_VERSION"
+      - docker pull $MXNET_IMAGE:$COACH_MXNET_GPU_BASE_TAG
+      - COACH_TF_GPU_BASE_TAG="$COACH_TF_FRAMEWORK_VERSION-gpu-py$PY_VERSION"
+      - docker pull $TF_IMAGE:$COACH_TF_GPU_BASE_TAG
       - |
-        COACH_MXNET_GPU_BASE_TAG="$COACH_MXNET_FRAMEWORK_VERSION-gpu-py$PY_VERSION"
-        docker pull $MXNET_IMAGE:$COACH_MXNET_GPU_BASE_TAG
-        COACH_TF_GPU_BASE_TAG="$COACH_TF_FRAMEWORK_VERSION-gpu-py$PY_VERSION"
-        docker pull $TF_IMAGE:$COACH_TF_GPU_BASE_TAG
         if [ "$RAY_TF_FRAMEWORK_VERSION" != "$COACH_TF_FRAMEWORK_VERSION" ]; then
           RAY_TF_GPU_BASE_TAG="$RAY_TF_FRAMEWORK_VERSION-gpu-py$PY_VERSION"
           docker pull $TF_IMAGE:$RAY_TF_GPU_BASE_TAG
@@ -80,21 +73,35 @@ phases:
 
       # build cpu images
       - echo "build cpu images"
-      - |
-        COACH_MXNET_CPU_TAG="coach-$COACH_MXNET_TOOLKIT_VERSION-mxnet-cpu-py$PY_VERSION-$BUILD_ID"
-        docker build -t $PREPROD_IMAGE:$COACH_MXNET_CPU_TAG -f coach/docker/$COACH_MXNET_TOOLKIT_VERSION/Dockerfile.mxnet --build-arg processor=cpu .
-        COACH_TF_CPU_TAG="coach-$COACH_TF_TOOLKIT_VERSION-tf-cpu-py$PY_VERSION-$BUILD_ID"
-        docker build -t $PREPROD_IMAGE:$COACH_TF_CPU_TAG -f coach/docker/$COACH_TF_TOOLKIT_VERSION/Dockerfile.tf --build-arg processor=cpu .
-        RAY_TF_CPU_TAG="ray-$RAY_TF_TOOKIT_VERSION-tf-cpu-py$PY_VERSION-$BUILD_ID"
-        docker build -t $PREPROD_IMAGE:$RAY_TF_CPU_TAG -f ray/docker/$RAY_TF_TOOKIT_VERSION/Dockerfile.tf --build-arg processor=cpu .
+      - COACH_MXNET_CPU_TAG="coach-$COACH_MXNET_TOOLKIT_VERSION-mxnet-cpu-py$PY_VERSION-$BUILD_ID"
+      - docker build -t $PREPROD_IMAGE:$COACH_MXNET_CPU_TAG -f coach/docker/$COACH_MXNET_TOOLKIT_VERSION/Dockerfile.mxnet --build-arg processor=cpu .
+      - COACH_TF_CPU_TAG="coach-$COACH_TF_TOOLKIT_VERSION-tf-cpu-py$PY_VERSION-$BUILD_ID"
+      - docker build -t $PREPROD_IMAGE:$COACH_TF_CPU_TAG -f coach/docker/$COACH_TF_TOOLKIT_VERSION/Dockerfile.tf --build-arg processor=cpu .
+      - RAY_TF_CPU_TAG="ray-$RAY_TF_TOOKIT_VERSION-tf-cpu-py$PY_VERSION-$BUILD_ID"
+      - docker build -t $PREPROD_IMAGE:$RAY_TF_CPU_TAG -f ray/docker/$RAY_TF_TOOKIT_VERSION/Dockerfile.tf --build-arg processor=cpu .
+
+      # build gpu images
+      - echo "build gpu images"
+      - COACH_MXNET_GPU_TAG="coach-$COACH_MXNET_TOOLKIT_VERSION-mxnet-gpu-py$PY_VERSION-$BUILD_ID"
+      - docker build -t $PREPROD_IMAGE:$COACH_MXNET_GPU_TAG -f coach/docker/$COACH_MXNET_TOOLKIT_VERSION/Dockerfile.mxnet --build-arg processor=gpu .
+      - COACH_TF_GPU_TAG="coach-$COACH_TF_TOOLKIT_VERSION-tf-gpu-py$PY_VERSION-$BUILD_ID"
+      - docker build -t $PREPROD_IMAGE:$COACH_TF_GPU_TAG -f coach/docker/$COACH_TF_TOOLKIT_VERSION/Dockerfile.tf --build-arg processor=gpu .
+      - RAY_TF_GPU_TAG="ray-$RAY_TF_TOOKIT_VERSION-tf-gpu-py$PY_VERSION-$BUILD_ID"
+      - docker build -t $PREPROD_IMAGE:$RAY_TF_GPU_TAG -f ray/docker/$RAY_TF_TOOKIT_VERSION/Dockerfile.tf --build-arg processor=gpu .
 
       # push cpu images to ecr
       - echo "push cpu images to ecr"
-      - |
-        $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
-        docker push $PREPROD_IMAGE:$COACH_MXNET_CPU_TAG
-        docker push $PREPROD_IMAGE:$COACH_TF_CPU_TAG
-        docker push $PREPROD_IMAGE:$RAY_TF_CPU_TAG
+      - $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
+      - docker push $PREPROD_IMAGE:$COACH_MXNET_CPU_TAG
+      - docker push $PREPROD_IMAGE:$COACH_TF_CPU_TAG
+      - docker push $PREPROD_IMAGE:$RAY_TF_CPU_TAG
+
+      # push gpu images to ecr
+      - echo "push gpu images to ecr"
+      - $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
+      - docker push $PREPROD_IMAGE:$COACH_MXNET_GPU_TAG
+      - docker push $PREPROD_IMAGE:$COACH_TF_GPU_TAG
+      - docker push $PREPROD_IMAGE:$RAY_TF_GPU_TAG
 
       # run cpu integration tests
       - echo "run cpu integration tests"
@@ -106,24 +113,6 @@ phases:
         else
           echo "skipping cpu integration tests"
         fi
-
-      # build gpu images
-      - echo "build gpu images"
-      - |
-        COACH_MXNET_GPU_TAG="coach-$COACH_MXNET_TOOLKIT_VERSION-mxnet-gpu-py$PY_VERSION-$BUILD_ID"
-        docker build -t $PREPROD_IMAGE:$COACH_MXNET_GPU_TAG -f coach/docker/$COACH_MXNET_TOOLKIT_VERSION/Dockerfile.mxnet --build-arg processor=gpu .
-        COACH_TF_GPU_TAG="coach-$COACH_TF_TOOLKIT_VERSION-tf-gpu-py$PY_VERSION-$BUILD_ID"
-        docker build -t $PREPROD_IMAGE:$COACH_TF_GPU_TAG -f coach/docker/$COACH_TF_TOOLKIT_VERSION/Dockerfile.tf --build-arg processor=gpu .
-        RAY_TF_GPU_TAG="ray-$RAY_TF_TOOKIT_VERSION-tf-gpu-py$PY_VERSION-$BUILD_ID"
-        docker build -t $PREPROD_IMAGE:$RAY_TF_GPU_TAG -f ray/docker/$RAY_TF_TOOKIT_VERSION/Dockerfile.tf --build-arg processor=gpu .
-
-      # push gpu images to ecr
-      - echo "push gpu images to ecr"
-      - |
-        $(aws ecr get-login --registry-ids $ACCOUNT --no-include-email --region $AWS_DEFAULT_REGION)
-        docker push $PREPROD_IMAGE:$COACH_MXNET_GPU_TAG
-        docker push $PREPROD_IMAGE:$COACH_TF_GPU_TAG
-        docker push $PREPROD_IMAGE:$RAY_TF_GPU_TAG
 
       # run gpu integration tests
       - echo "run gpu integration tests"
@@ -161,16 +150,16 @@ phases:
         else
           echo "skipping gpu sagemaker tests"
         fi
+
     finally:
       # shut down remote gpu instance
       - cleanup-gpu-instances
       - cleanup-key-pairs
 
       # remove ecr image
-      - |
-        aws ecr batch-delete-image --repository-name $ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$COACH_MXNET_CPU_TAG
-        aws ecr batch-delete-image --repository-name $ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$COACH_TF_CPU_TAG
-        aws ecr batch-delete-image --repository-name $ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TF_CPU_TAG
-        aws ecr batch-delete-image --repository-name $ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$COACH_MXNET_GPU_TAG
-        aws ecr batch-delete-image --repository-name $ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$COACH_TF_GPU_TAG
-        aws ecr batch-delete-image --repository-name $ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TF_GPU_TAG
+      - aws ecr batch-delete-image --repository-name $ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$COACH_MXNET_CPU_TAG
+      - aws ecr batch-delete-image --repository-name $ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$COACH_TF_CPU_TAG
+      - aws ecr batch-delete-image --repository-name $ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TF_CPU_TAG
+      - aws ecr batch-delete-image --repository-name $ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$COACH_MXNET_GPU_TAG
+      - aws ecr batch-delete-image --repository-name $ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$COACH_TF_GPU_TAG
+      - aws ecr batch-delete-image --repository-name $ECR_REPO --region $AWS_DEFAULT_REGION --image-ids imageTag=$RAY_TF_GPU_TAG
