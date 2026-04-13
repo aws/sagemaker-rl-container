@@ -45,6 +45,6 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
 
-    install_requires=['numpy', 'tox', 'flake8', 'pytest==4.4.2', 'pytest-cov', 'pytest-xdist',
+    install_requires=['numpy', 'tox', 'flake8', 'pytest==9.0.3', 'pytest-cov', 'pytest-xdist',
                       'mock', 'sagemaker', 'docker-compose'],
 )
